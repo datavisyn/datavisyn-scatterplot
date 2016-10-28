@@ -4,13 +4,13 @@
     "target": "es5",
     "noImplicitAny": false,
     "sourceMap": true,
-    "jsx": "react",
     "moduleResolution": "node",
-    "lib": ["dom", "es2015"]
+    "lib": ["dom", "es2015"],
+    "declaration": true,
+    "declarationDir": "typings"
 	},
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx",
     "test/**/*.ts",
     "tsd.d.ts"
   ]

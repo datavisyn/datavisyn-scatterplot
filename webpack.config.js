@@ -12,8 +12,7 @@ module.exports = function (env) {
   const isProduction = env === 'prod';
   const base = {
     entry: {
-      vanilla: [path.resolve(__dirname, 'src/index.ts')],
-      react: [path.resolve(__dirname, 'src/react/index.tsx')]
+      scatterplot: [path.resolve(__dirname, 'src/index.ts')]
     },
     output: {
       path: path.resolve(__dirname, 'build'),
@@ -36,10 +35,6 @@ module.exports = function (env) {
       extensions: ['.webpack.js', '.web.js', '.js', '.ts', '.tsx'],
 
       modules: [path.resolve(__dirname, 'src'), 'node_modules']
-    },
-    externals: {
-      react: 'React',
-      'react-dom': 'ReactDOM'
     },
     plugins: [
       new webpack.BannerPlugin({
