@@ -4,13 +4,22 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import {symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye, SymbolType} from 'd3-shape';
+import {
+  symbolCircle,
+  symbolCross,
+  symbolDiamond,
+  symbolSquare,
+  symbolStar,
+  symbolTriangle,
+  symbolWye,
+  SymbolType
+} from 'd3-shape';
 
 /**
  * a symbol renderer renderes a bunch of data points using `render` at the end `done` will be called
  */
 export interface ISymbolRenderer<T> {
-  render(x:number, y:number, d:T);
+  render(x: number, y: number, d: T);
   done();
 }
 
@@ -32,16 +41,16 @@ export interface ISymbol<T> {
    * @param mode the current render mode
    * @returns a symbol renderer
    */
-  (ctx:CanvasRenderingContext2D, mode: ERenderMode): ISymbolRenderer<T>;
+  (ctx: CanvasRenderingContext2D, mode: ERenderMode): ISymbolRenderer<T>;
 }
 
-export const d3SymbolCircle = symbolCircle;
-export const d3SymbolCross = symbolCross;
-export const d3SymbolDiamond = symbolDiamond;
-export const d3SymbolSquare = symbolSquare;
-export const d3SymbolStar = symbolStar;
-export const d3SymbolTriangle = symbolTriangle;
-export const d3SymbolWye = symbolWye;
+export const d3SymbolCircle: SymbolType = symbolCircle;
+export const d3SymbolCross: SymbolType = symbolCross;
+export const d3SymbolDiamond: SymbolType = symbolDiamond;
+export const d3SymbolSquare: SymbolType = symbolSquare;
+export const d3SymbolStar: SymbolType = symbolStar;
+export const d3SymbolTriangle: SymbolType = symbolTriangle;
+export const d3SymbolWye: SymbolType = symbolWye;
 
 /**
  * generic wrapper around d3 symbols for rendering
@@ -50,13 +59,13 @@ export const d3SymbolWye = symbolWye;
  * @param size the size of the symbol
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
-export function d3Symbol(symbol = d3SymbolCircle, fillStyle:string = 'steelblue', size = 5):ISymbol<any> {
-  return (ctx:CanvasRenderingContext2D) => {
+export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string = 'steelblue', size = 5): ISymbol<any> {
+  return (ctx: CanvasRenderingContext2D) => {
     //before
     ctx.beginPath();
     return {
       //during
-      render: (x:number, y:number) => {
+      render: (x: number, y: number) => {
         ctx.translate(x, y);
         symbol.draw(ctx, size);
         ctx.translate(-x, -y);
@@ -77,7 +86,7 @@ export function d3Symbol(symbol = d3SymbolCircle, fillStyle:string = 'steelblue'
  * @param size
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
-export function circleSymbol(fillStyle:string = 'steelblue', size = 20):ISymbol<any> {
+export function circleSymbol(fillStyle: string = 'steelblue', size = 20): ISymbol<any> {
   const r = Math.sqrt(size / Math.PI);
   const tau = 2 * Math.PI;
 
@@ -87,12 +96,12 @@ export function circleSymbol(fillStyle:string = 'steelblue', size = 20):ISymbol<
     [ERenderMode.SELECTED]: 'red'
   };
 
-  return (ctx:CanvasRenderingContext2D, mode : ERenderMode) => {
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
     //before
     ctx.beginPath();
     return {
       //during
-      render: (x:number, y:number) => {
+      render: (x: number, y: number) => {
         ctx.moveTo(x + r, y);
         ctx.arc(x, y, r, 0, tau);
       },
