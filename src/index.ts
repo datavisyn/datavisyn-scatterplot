@@ -273,7 +273,7 @@ export default class Scatterplot<T> {
     }
     //find the delta
     var changed = false;
-    const s = this.selection;
+    const s = this.selection.slice();
     selection.forEach((s_new) => {
       const i = s.indexOf(s_new);
       if (i < 0) { //new
@@ -286,7 +286,6 @@ export default class Scatterplot<T> {
     changed = changed || s.length > 0;
     //remove removed items
     this.selectionTree.removeAll(s);
-
     if (changed) {
       this.props.onSelectionChanged.call(this);
       this.render(ERenderReason.SELECTION_CHANGED);
@@ -297,9 +296,11 @@ export default class Scatterplot<T> {
    * clears the selection, same as .selection=[]
    */
   clearSelection() {
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
-    this.props.onSelectionChanged.call(this);
-    this.render(ERenderReason.SELECTION_CHANGED);
+    if (this.selectionTree.size() > 0) {
+      this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+      this.props.onSelectionChanged.call(this);
+      this.render(ERenderReason.SELECTION_CHANGED);
+    }
   }
 
   /**
