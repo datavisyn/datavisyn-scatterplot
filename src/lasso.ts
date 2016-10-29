@@ -11,28 +11,52 @@ import {hasOverlap, ITester} from './quadtree';
 
 declare type IPoint = [number, number];
 
+const MIN_POINT_DISTANCE2 = 10*10;
+
+function distance2(a: IPoint, b: IPoint) {
+  const x = a[0] - b[0];
+  const y = a[1] - b[1];
+  return x * x + y * y;
+}
+
 export default class Lasso {
   private line = d3line().curve(curveLinearClosed);
-  private points:IPoint[] = [];
+  private points: IPoint[] = [];
+  private current: IPoint = null;
 
-  start(x:number, y:number) {
+  start(x: number, y: number) {
     this.clear();
-    this.points.push([x, y]);
+    this.current = [x, y];
+    this.points.push(this.current);
   }
 
-  drag(x:number, y:number) {
-    this.points.push([x, y]);
+  setCurrent(x: number, y: number) {
+    this.current = [x, y];
   }
 
-  end(x:number, y:number) {
-    this.clear();
+  pushCurrent() {
+    const p = this.points,
+      pl = p.length,
+      c = this.current;
+    if (!c || (pl > 0 && distance2(p[pl - 1], c) < MIN_POINT_DISTANCE2)) {
+      return false;
+    }
+    p.push(this.current);
+    return true;
+  }
+
+  end(x: number, y: number) {
+    this.setCurrent(x, y);
+    this.pushCurrent();
+    this.current = null;
   }
 
   clear() {
     this.points = [];
+    this.current = null;
   }
 
-  tester(p2nX:(p:number)=>number, p2nY:(p:number)=>number): ITester {
+  tester(p2nX: (p: number)=>number, p2nY: (p: number)=>number): ITester {
     if (this.points.length < 3) {
       return null;
     }
@@ -40,34 +64,36 @@ export default class Lasso {
     const [x0, x1] = extent(polygon, (d) => d[0]);
     const [y0, y1] = extent(polygon, (d) => d[1]);
     return {
-      test: (x:number, y:number) => polygonContains(polygon, [x, y]),
+      test: (x: number, y: number) => polygonContains(polygon, [x, y]),
       testArea: hasOverlap(x0, y0, x1, y1)
     };
   }
 
-  render(ctx:CanvasRenderingContext2D) {
-    if (this.points.length === 0) {
-      return;
-    }
+  render(ctx: CanvasRenderingContext2D) {
+    const p = this.points;
     ctx.save();
-
-    this.line.context(ctx)(this.points);
-
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fill();
-
-    function renderPoint([x,y]: IPoint) {
-      ctx.moveTo(x, y);
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-    }
 
     ctx.lineWidth = 5;
     ctx.strokeStyle = 'rgba(0,0,0,1)';
-    ctx.stroke();
+
+    if (p.length > 0) {
+      this.line.context(ctx)(p);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    function renderPoint(p: IPoint) {
+      if (!p) {
+        return;
+      }
+      ctx.moveTo(p[0], p[1]);
+      ctx.arc(p[0], p[1], 3, 0, Math.PI * 2);
+    }
 
     ctx.beginPath();
-    renderPoint(this.points[0]);
-    renderPoint(this.points[this.points.length - 1]);
+    renderPoint(p[0]);
+    renderPoint(this.current);
     ctx.closePath();
     ctx.stroke();
 

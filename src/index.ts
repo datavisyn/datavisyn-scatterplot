@@ -125,6 +125,12 @@ export interface IScatterplotOptions<T> {
    * default: event.ctrlKey || event.altKey
    */
   isSelectEvent?(event:MouseEvent) : boolean; //=> event.ctrlKey || event.altKey
+
+  /**
+   * interval time when the lasso is evaluated
+   * default: 200
+   */
+  lassoInterval?: number;
 }
 
 //normalized range the quadtree is defined
@@ -176,7 +182,9 @@ export default class Scatterplot<T> {
 
     onSelectionChanged: ()=>undefined,
 
-    isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey
+    isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
+
+    lassoInterval: 100
   };
 
 
@@ -200,6 +208,7 @@ export default class Scatterplot<T> {
   private currentTransform:ZoomTransform = zoomIdentity;
   private zoomStartTransform:ZoomTransform;
   private zommHandle = -1;
+  private dragHandle = -1;
 
   constructor(data:T[], private parent:HTMLElement, props?:IScatterplotOptions<T>) {
     this.props = merge(this.props, props);
@@ -263,13 +272,16 @@ export default class Scatterplot<T> {
    * @param selection
    */
   set selection(selection:T[]) {
+    this.setSelection(selection);
+  }
+
+  setSelection(selection: T[]) {
     if (selection == null) {
       selection = []; //ensure valid value
     }
     //this.lasso.clear();
     if (selection.length === 0) {
-      this.clearSelection();
-      return;
+      return this.clearSelection();
     }
     //find the delta
     var changed = false;
@@ -290,17 +302,20 @@ export default class Scatterplot<T> {
       this.props.onSelectionChanged.call(this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
+    return changed;
   }
 
   /**
    * clears the selection, same as .selection=[]
    */
   clearSelection() {
-    if (this.selectionTree.size() > 0) {
+    const changed = this.selectionTree.size() > 0;
+    if (changed) {
       this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
       this.props.onSelectionChanged.call(this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
+    return changed;
   }
 
   /**
@@ -309,11 +324,12 @@ export default class Scatterplot<T> {
    */
   addToSelection(items:T[]) {
     if (items.length === 0) {
-      return;
+      return false;
     }
     this.selectionTree.addAll(items);
     this.props.onSelectionChanged.call(this);
     this.render(ERenderReason.SELECTION_CHANGED);
+    return true;
   }
 
   /**
@@ -322,16 +338,17 @@ export default class Scatterplot<T> {
    */
   removeFromSelection(items:T[]) {
     if (items.length === 0) {
-      return;
+      return false;
     }
     this.selectionTree.removeAll(items);
     this.props.onSelectionChanged.call(this);
     this.render(ERenderReason.SELECTION_CHANGED);
+    return true;
   }
 
   private selectWithTester(tester:ITester) {
     const selection = findByTester(this.tree, tester);
-    this.selection = selection;
+    return this.setSelection(selection);
   }
 
   private checkResize() {
@@ -424,24 +441,41 @@ export default class Scatterplot<T> {
 
   private onDragStart() {
     this.lasso.start(d3event.x, d3event.y);
-    this.clearSelection();
-  }
-
-  private onDrag() {
-    this.lasso.drag(d3event.x, d3event.y);
-
-    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
-    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY));
-    if (tester) {
-      this.selectWithTester(tester);
-    } else {
+    if (!this.clearSelection()) {
       this.render(ERenderReason.SELECTION_CHANGED);
     }
   }
 
-  private onDragEnd() {
-    this.lasso.end(d3event.x, d3event.y);
+  private onDrag() {
+    if (this.dragHandle < 0) {
+      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lassoInterval);
+    }
+    this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
+  }
+
+  private updateDrag() {
+    if (this.lasso.pushCurrent()) {
+      this.retestLasso();
+    }
+  }
+
+  private retestLasso() {
+    console.log('test lasso');
+    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
+    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY));
+    return tester && this.selectWithTester(tester);
+  }
+
+  private onDragEnd() {
+    clearInterval(this.dragHandle);
+    this.dragHandle = -1;
+
+    this.lasso.end(d3event.x, d3event.y);
+    if (!this.retestLasso()) {
+      this.render(ERenderReason.SELECTION_CHANGED);
+    }
+    this.lasso.clear();
   }
 
   private onClick(event:MouseEvent) {
