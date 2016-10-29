@@ -16,7 +16,7 @@ import * as _symbol from './symbol';
 import merge from './merge';
 import {findAll, forEachLeaf, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
 import Lasso from './lasso';
-import {cssprefix, DEBUG} from './constants';
+import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 
 /**
@@ -389,7 +389,7 @@ export default class Scatterplot<T> {
       //tranform from view to data without translation
       const normalized = view / viewSize * normalizedSize;
       //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
-      console.log(view, viewSize, transform.k, normalizedSize, normalized);
+      debuglog(view, viewSize, transform.k, normalizedSize, normalized);
       return normalized;
     };
 
@@ -461,7 +461,6 @@ export default class Scatterplot<T> {
   }
 
   private retestLasso() {
-    console.log('test lasso');
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY));
     return tester && this.selectWithTester(tester);
@@ -580,7 +579,7 @@ export default class Scatterplot<T> {
       ctx.clip();
 
       //ctx.translate(bounds.x0, bounds.y0+bounds_height); //move to visible area
-      //console.log(x,y,k, bounds.x0, bounds.y0, n2pX(0), n2pY(100), this.currentTransform.x, this.currentTransform.y);
+      //debuglog(x,y,k, bounds.x0, bounds.y0, n2pX(0), n2pY(100), this.currentTransform.x, this.currentTransform.y);
       //ctx.scale(k,k);
       //ctx.translate(0, -bounds_height); //move to visible area
       ctx.translate(x, y);
@@ -607,7 +606,7 @@ export default class Scatterplot<T> {
       }
     };
 
-    console.log(ERenderReason[reason]);
+    debuglog(ERenderReason[reason]);
     //render logic
     switch (reason) {
       case ERenderReason.PERFORM_TRANSLATE:
@@ -675,7 +674,7 @@ export default class Scatterplot<T> {
       }
       if (useAggregation(x0, y0, x1, y1)) {
         let d = getFirstLeaf(node);
-        //console.log('aggregate', getTreeSize(node));
+        //debuglog('aggregate', getTreeSize(node));
         rendered++;
         aggregated += debug ? (getTreeSize(node) - 1) : 0;
         renderer.render(xscale(x(d)), yscale(y(d)), d);
@@ -693,7 +692,7 @@ export default class Scatterplot<T> {
     renderer.done();
 
     if (debug) {
-      console.log('rendered', rendered, 'aggregated', aggregated, 'hidden', hidden, 'total', this.tree.size());
+      debuglog('rendered', rendered, 'aggregated', aggregated, 'hidden', hidden, 'total', this.tree.size());
     }
 
     //a dummy path to clear the 'to draw' state
