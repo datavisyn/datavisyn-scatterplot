@@ -101,6 +101,11 @@ export interface IScatterplotOptions<T> {
      * default: event.ctrlKey || event.altKey
      */
     isSelectEvent?(event: MouseEvent): boolean;
+    /**
+     * interval time when the lasso is evaluated
+     * default: 200
+     */
+    lassoInterval?: number;
 }
 /**
  * reasons why a new render pass is needed
@@ -136,6 +141,7 @@ export default class Scatterplot<T> {
     private currentTransform;
     private zoomStartTransform;
     private zommHandle;
+    private dragHandle;
     constructor(data: T[], parent: HTMLElement, props?: IScatterplotOptions<T>);
     /**
      * returns the current selection
@@ -145,20 +151,21 @@ export default class Scatterplot<T> {
      * @param selection
      */
     selection: T[];
+    setSelection(selection: T[]): boolean;
     /**
      * clears the selection, same as .selection=[]
      */
-    clearSelection(): void;
+    clearSelection(): boolean;
     /**
      * shortcut to add items to the selection
      * @param items
      */
-    addToSelection(items: T[]): void;
+    addToSelection(items: T[]): boolean;
     /**
      * shortcut to remove items from the selection
      * @param items
      */
-    removeFromSelection(items: T[]): void;
+    removeFromSelection(items: T[]): boolean;
     private selectWithTester(tester);
     private checkResize();
     resized(): void;
@@ -170,6 +177,8 @@ export default class Scatterplot<T> {
     private onZoom();
     private onDragStart();
     private onDrag();
+    private updateDrag();
+    private retestLasso();
     private onDragEnd();
     private onClick(event);
     private showTooltip(pos);

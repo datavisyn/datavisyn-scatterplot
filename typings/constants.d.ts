@@ -9,3 +9,4 @@
  */
 export declare const cssprefix: string;
 export declare const DEBUG: boolean;
+export declare const debuglog: (message?: any, ...optionalParams: any[]) => void;
