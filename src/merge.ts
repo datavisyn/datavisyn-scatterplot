@@ -7,14 +7,15 @@
 /**
  * merges the second object into the first one
  * @param target
- * @param other
+ * @param others
  * @returns {T}
  */
-export default function merge<T>(target:T, other?:any) {
-  if (other === undefined) {
+export default function merge<T>(target:T, ...others:any[]) {
+  others = others.filter((o) => !!o); //is defined
+  if (others.length === 0) {
     return target;
   }
-  Object.keys(other).forEach((key) => {
+  others.forEach((other) => Object.keys(other).forEach((key) => {
     const v = other[key];
     if (Object.prototype.toString.call(v) === '[object Object]') {
       //nested
@@ -22,6 +23,6 @@ export default function merge<T>(target:T, other?:any) {
     } else {
       target[key] = v;
     }
-  });
+  }));
   return target;
 }
