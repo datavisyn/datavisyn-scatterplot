@@ -52,7 +52,7 @@ export interface IScatterplotOptions<T> {
 
   /**
    * min max scaling factor
-   * default: 0.5, 4
+   * default: 0.1, 10
    */
   scaleExtent?: [number, number];
 
@@ -180,7 +180,7 @@ export default class Scatterplot<T> {
       right: 10
     },
     clickRadius: 10,
-    scaleExtent: [1 / 2, 4],
+    scaleExtent: [0.1, 10],
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
