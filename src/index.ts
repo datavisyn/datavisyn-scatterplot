@@ -120,7 +120,7 @@ export interface IScatterplotOptions<T> {
   /**
    * shows the tooltip
    * default: simple popup similar to bootstrap
-   * if `null` tooltips are disabled
+   * if `null` or `false` tooltips are disabled
    * @param parent the scatterplot html element
    * @param items items to show, empty to hide tooltip
    * @param x the x position relative to the plot
@@ -135,7 +135,7 @@ export interface IScatterplotOptions<T> {
   onSelectionChanged?();
 
   /**
-   * determines whether the given mouse is a selection or panning event, if `null` selection is disabled
+   * determines whether the given mouse is a selection or panning event, if `null` or `false` selection is disabled
    * default: event.ctrlKey || event.altKey
    *
    */
@@ -284,11 +284,11 @@ export default class Scatterplot<T> {
   }
 
   private isSelectAble() {
-    return this.props.isSelectEvent != null;
+    return this.props.isSelectEvent != null && (<any>this.props.isSelectEvent) !== false;
   }
 
   private hasTooltips() {
-    return this.props.showTooltip != null;
+    return this.props.showTooltip != null && (<any>this.props.showTooltip) !== false;
   }
 
   /**
