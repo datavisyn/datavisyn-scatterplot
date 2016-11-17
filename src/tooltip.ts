@@ -28,6 +28,16 @@ function showTooltipAt(tooltip: HTMLElement, x: number, y: number) {
   tooltip.style.top = (y-tooltip.clientHeight)+'px';
 }
 
+function toString(d: any) {
+  if (typeof d.toString === 'function') {
+    let s = d.toString();
+    if (s !== '[object Object]') {
+      return s;
+    }
+  }
+  return JSON.stringify(d);
+}
+
 export default function showTooltip(parent: HTMLElement, items:any[], x:number, y:number) {
   const tooltip: HTMLElement = findTooltip(parent, items.length > 0);
   if (items.length === 0) {
@@ -38,7 +48,7 @@ export default function showTooltip(parent: HTMLElement, items:any[], x:number, 
     return;
   }
   const content = <HTMLElement>tooltip.querySelector('div');
-  content.innerHTML = `<pre>${items.map((d) => JSON.stringify(d)).join('\n')}</pre>`;
+  content.innerHTML = `<pre>${items.map(toString).join('\n')}</pre>`;
 
   showTooltipAt(tooltip, x, y);
 }
