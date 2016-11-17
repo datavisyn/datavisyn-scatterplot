@@ -146,6 +146,14 @@ export interface IScatterplotOptions<T> {
    * default: 200
    */
   lassoInterval?: number;
+
+  /**
+   * additional render elements, e.g. lines
+   * @param ctx
+   * @param xscale
+   * @param yscale
+   */
+  extras?(ctx: CanvasRenderingContext2D, xscale: (domain)=>number, yscale: (domain)=>number);
 }
 
 //normalized range the quadtree is defined
@@ -202,7 +210,9 @@ export default class Scatterplot<T> {
 
     isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
 
-    lassoInterval: 100
+    lassoInterval: 100,
+
+    extras: null
   };
 
 
@@ -234,7 +244,7 @@ export default class Scatterplot<T> {
     //init dom
     parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() ? 'style="visibility: hidden"': ''}></canvas>
+      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"': ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},0)"><g>
       </svg>
@@ -299,6 +309,10 @@ export default class Scatterplot<T> {
 
   private isSelectAble() {
     return this.props.isSelectEvent != null && (<any>this.props.isSelectEvent) !== false;
+  }
+
+  private hasExtras() {
+    return this.props.extras != null;
   }
 
   private hasTooltips() {
@@ -612,11 +626,18 @@ export default class Scatterplot<T> {
       const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL);
       const debug = !isSelection && DEBUG;
       this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);
+
+      if (isSelection && this.hasExtras()) {
+        ctx.save();
+        this.props.extras(ctx, xscale, yscale);
+        ctx.restore();
+      }
+
       ctx.restore();
       return ctx;
     };
 
-    const renderSelection = !this.isSelectAble() ? ()=>undefined : () => {
+    const renderSelection = !this.isSelectAble() && !this.hasExtras() ? ()=>undefined : () => {
       let ctx = renderCtx(true);
       this.lasso.render(ctx);
     };
