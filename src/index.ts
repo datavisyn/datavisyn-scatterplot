@@ -274,13 +274,27 @@ export default class Scatterplot<T> {
       $parent.on('mouseleave', () => this.onMouseLeave(d3event))
         .on('mousemove', () => this.onMouseMove(d3event));
     }
+
+    this.setDataImpl(data);
+    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+  }
+
+  get data() {
+    return this.tree.data();
+  }
+
+  private setDataImpl(data: T[]) {
     //generate a quad tree out of the data
     //work on a normalized dimension to avoid hazzling
     const domain2normalizedX = this.props.xscale.copy().range(NORMALIZED_RANGE);
     const domain2normalizedY = this.props.yscale.copy().range(NORMALIZED_RANGE);
-
     this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+  }
+
+  set data(data: T[]) {
+    this.setDataImpl(data);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+    this.render(ERenderReason.DIRTY);
   }
 
   private isSelectAble() {
@@ -346,7 +360,7 @@ export default class Scatterplot<T> {
    * clears the selection, same as .selection=[]
    */
   clearSelection() {
-    const changed = this.selectionTree.size() > 0;
+    const changed = this.selectionTree !== null && this.selectionTree.size() > 0;
     if (changed) {
       this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
       this.props.onSelectionChanged.call(this);
