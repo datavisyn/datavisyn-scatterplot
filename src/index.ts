@@ -64,6 +64,18 @@ export interface IScatterplotOptions<T> {
   x?:IAccessor<T>;
 
   /**
+   * x axis label
+   * default: x
+   */
+  xlabel?: string;
+
+  /**
+   * y axis label
+   * default: x
+   */
+  ylabel?: string;
+
+  /**
    * y accessor of the data
    * default: d.y
    * @param d
@@ -159,15 +171,18 @@ export default class Scatterplot<T> {
 
   private props:IScatterplotOptions<T> = {
     margin: {
-      left: 40,
+      left: 32,
       top: 10,
-      bottom: 20,
+      bottom: 32,
       right: 10
     },
     clickRadius: 10,
     scaleExtent: [1 / 2, 4],
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
+
+    xlabel: 'x',
+    ylabel: 'y',
 
     xscale: <IScale>d3scale.scaleLinear().domain([0, 100]),
     yscale: <IScale>d3scale.scaleLinear().domain([0, 100]),
@@ -223,6 +238,8 @@ export default class Scatterplot<T> {
       <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
         <g><g>
       </svg>
+      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left+2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
+      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top+2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
     `;
     parent.classList.add(cssprefix);
 
@@ -643,8 +660,8 @@ export default class Scatterplot<T> {
     const left = axisLeft(yscale),
       bottom = axisBottom(xscale),
       $parent = select(this.parent);
-    $parent.select('svg g').call(left);
-    $parent.select('svg:last-of-type g').call(bottom);
+    $parent.select('svg > g').call(left);
+    $parent.select('svg:last-of-type > g').call(bottom);
   }
 
   private renderTree(ctx:CanvasRenderingContext2D, tree:Quadtree<T>, renderer:ISymbolRenderer<T>, xscale:IScale, yscale:IScale, isNodeVisible:IBoundsPredicate, useAggregation:IBoundsPredicate, debug = false) {
