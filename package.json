@@ -27,7 +27,7 @@
   "files": [
     "src",
     "build",
-    "typings"
+	"typings"
   ],
   "scripts": {
     "compile": "tsc",
