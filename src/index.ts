@@ -119,6 +119,8 @@ export interface IScatterplotOptions<T> {
 
   /**
    * shows the tooltip
+   * default: simple popup similar to bootstrap
+   * if `null` tooltips are disabled
    * @param parent the scatterplot html element
    * @param items items to show, empty to hide tooltip
    * @param x the x position relative to the plot
@@ -133,8 +135,9 @@ export interface IScatterplotOptions<T> {
   onSelectionChanged?();
 
   /**
-   * determines whether the given mouse is a selection or panning event
+   * determines whether the given mouse is a selection or panning event, if `null` selection is disabled
    * default: event.ctrlKey || event.altKey
+   *
    */
   isSelectEvent?(event:MouseEvent) : boolean; //=> event.ctrlKey || event.altKey
 
@@ -238,8 +241,8 @@ export default class Scatterplot<T> {
       <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
         <g><g>
       </svg>
-      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left+2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
-      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top+2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
+      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
+      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
     `;
     parent.classList.add(cssprefix);
 
@@ -253,21 +256,24 @@ export default class Scatterplot<T> {
       .on('zoom', this.onZoom.bind(this))
       .on('end', this.onZoomEnd.bind(this))
       .scaleExtent(this.props.scaleExtent)
-      .filter(() => d3event.button === 0 && !this.props.isSelectEvent(<MouseEvent>d3event));
-    const drag = d3drag()
-      .on('start', this.onDragStart.bind(this))
-      .on('drag', this.onDrag.bind(this))
-      .on('end', this.onDragEnd.bind(this))
-      .filter(() => d3event.button === 0 && this.props.isSelectEvent(<MouseEvent>d3event));
+      .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
 
     //need to use d3 for d3.mouse to work
-    select(this.parent)
-      .call(zoom)
-      .call(drag)
-      .on('click', () => this.onClick(d3event))
-      .on('mouseleave', () => this.onMouseLeave(d3event))
-      .on('mousemove', () => this.onMouseMove(d3event));
+    const $parent = select(this.parent).call(zoom);
 
+    if (this.isSelectAble()) {
+      const drag = d3drag()
+        .on('start', this.onDragStart.bind(this))
+        .on('drag', this.onDrag.bind(this))
+        .on('end', this.onDragEnd.bind(this))
+        .filter(() => d3event.button === 0 && this.props.isSelectEvent(<MouseEvent>d3event));
+      $parent.call(drag)
+        .on('click', () => this.onClick(d3event));
+    }
+    if (this.hasTooltips()) {
+      $parent.on('mouseleave', () => this.onMouseLeave(d3event))
+        .on('mousemove', () => this.onMouseMove(d3event));
+    }
     //generate a quad tree out of the data
     //work on a normalized dimension to avoid hazzling
     const domain2normalizedX = this.props.xscale.copy().range(NORMALIZED_RANGE);
@@ -277,10 +283,21 @@ export default class Scatterplot<T> {
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
   }
 
+  private isSelectAble() {
+    return this.props.isSelectEvent != null;
+  }
+
+  private hasTooltips() {
+    return this.props.showTooltip != null;
+  }
+
   /**
    * returns the current selection
    */
   get selection() {
+    if (!this.isSelectAble()) {
+      return [];
+    }
     return this.selectionTree.data();
   }
 
@@ -293,6 +310,9 @@ export default class Scatterplot<T> {
   }
 
   setSelection(selection: T[]) {
+    if (!this.isSelectAble()) {
+      return false;
+    }
     if (selection == null) {
       selection = []; //ensure valid value
     }
@@ -340,7 +360,7 @@ export default class Scatterplot<T> {
    * @param items
    */
   addToSelection(items:T[]) {
-    if (items.length === 0) {
+    if (items.length === 0 || !this.isSelectAble()) {
       return false;
     }
     this.selectionTree.addAll(items);
@@ -354,7 +374,7 @@ export default class Scatterplot<T> {
    * @param items
    */
   removeFromSelection(items:T[]) {
-    if (items.length === 0) {
+    if (items.length === 0 || !this.isSelectAble()) {
       return false;
     }
     this.selectionTree.removeAll(items);
@@ -582,7 +602,7 @@ export default class Scatterplot<T> {
       return ctx;
     };
 
-    const renderSelection = () => {
+    const renderSelection = !this.isSelectAble() ? ()=>undefined : () => {
       let ctx = renderCtx(true);
       this.lasso.render(ctx);
     };
