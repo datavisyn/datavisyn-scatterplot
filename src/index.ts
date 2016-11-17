@@ -234,7 +234,7 @@ export default class Scatterplot<T> {
     //init dom
     parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-selection-layer"></canvas>
+      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() ? 'style="visibility: hidden"': ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},0)"><g>
       </svg>
