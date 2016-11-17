@@ -16,11 +16,11 @@
   ],
   "license": "BSD-3-Clause",
   "bugs": {
-    "url": "https://github.com/sgratzl/canvas-scatterplot/issues"
+    "url": "https://github.com/datavisyn/datavisyn-scatterplot/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sgratzl/canvas-scatterplot.git"
+    "url": "https://github.com/datavisyn/datavisyn-scatterplot.git"
   },
   "main": "build/scatterplot.js",
   "typings": "typings/index.d.ts",
@@ -30,19 +30,23 @@
     "typings"
   ],
   "scripts": {
-    "start": "webpack-dev-server --inline --hot",
     "compile": "tsc",
     "lint": "tslint -c tslint.json src/**.ts test/**.ts",
     "docs": "typedoc --options typedoc.json src/**.ts",
     "prebuild": "npm run test",
     "build": "webpack -p --env prod",
+    "build:dev": "webpack",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server --inline --hot",
     "release:major": "npm version major && npm publish && git push --follow-tags",
     "release:minor": "npm version minor && npm publish && git push --follow-tags",
     "release:patch": "npm version patch && npm publish && git push --follow-tags",
     "pretest": "npm run compile",
     "test": "karma start",
     "posttest": "npm run lint",
-    "test:watch": "karma start --autoWatch=true --singleRun=false"
+    "test:watch": "karma start --autoWatch=true --singleRun=false",
+    "predist": "npm run build",
+    "dist": "mkdirp dist && cd build && tar cvzf ../dist/datavisyn-scatterplot.tar.gz *"
   },
   "devDependencies": {
     "awesome-typescript-loader": "^2.2.4",
