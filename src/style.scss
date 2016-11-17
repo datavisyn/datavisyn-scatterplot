@@ -34,7 +34,35 @@
       bottom: 0;
       z-index: 3;
     }
+
+
+
   }
+
+  div {
+    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-bottom-label {
+      pointer-events: none;
+      user-select: none;
+      text-align: center;
+      position: absolute;
+    }
+
+    &.datavisyn-scatterplot-axis-bottom-label {
+      bottom: 0;
+    }
+
+    &.datavisyn-scatterplot-axis-left-label {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      > div {
+        transform: rotate(90deg);
+        transform-origin: center center;
+      }
+    }
+  }
+
   //similar to bootstrap tooltip
   .datavisyn-scatterplot-tooltip {
     display: none;
