@@ -269,7 +269,9 @@ export default class Scatterplot<T> {
       .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
 
     //need to use d3 for d3.mouse to work
-    const $parent = select(this.parent).call(zoom);
+    const $parent = select(this.parent)
+      .call(zoom)
+      .on('wheel', () => d3event.preventDefault());
 
     if (this.isSelectAble()) {
       const drag = d3drag()
