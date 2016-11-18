@@ -520,7 +520,13 @@ export default class Scatterplot<T> {
     this.currentTransform = new_;
     const tchanged = (old.x !== new_.x || old.y !== new_.y);
     const schanged = (old.k !== new_.k);
-    const delta = {x: new_.x - old.x, y: new_.y - old.y, k: new_.k / old.k};
+    const scale = this.props.scale;
+    const delta = {
+      x: (scale === EScaleAxes.x || scale == EScaleAxes.xy) ? new_.x - old.x : 0,
+      y: (scale === EScaleAxes.y || scale == EScaleAxes.xy) ? new_.y - old.y: 0,
+      kx: (scale === EScaleAxes.x || scale == EScaleAxes.xy) ? new_.k / old.k: 1,
+      ky: (scale === EScaleAxes.y || scale == EScaleAxes.xy) ? new_.k / old.k: 1
+    };
     if (tchanged && schanged) {
       this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
     } else if (schanged) {
@@ -605,7 +611,7 @@ export default class Scatterplot<T> {
     this.props.showTooltip(this.parent, [], 0, 0);
   }
 
-  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, k: 1}) {
+  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
     if (this.checkResize()) {
       //check resize
       return this.resized();
@@ -669,7 +675,7 @@ export default class Scatterplot<T> {
       this.lasso.render(ctx);
     };
 
-    const transformData = (x:number, y:number, k:number) => {
+    const transformData = (x:number, y:number, kx:number, ky:number) => {
       //idea copy the data layer to selection layer in a transformed way and swap
       const ctx = this.canvasSelectionLayer.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
@@ -685,7 +691,7 @@ export default class Scatterplot<T> {
       //copy just the visible area
       //canvas, clip area, target area
       //see http://www.w3schools.com/tags/canvas_drawimage.asp
-      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, bounds_width, bounds_height, bounds.x0, bounds.y0, bounds_width * k, bounds_height * k);
+      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, bounds_width, bounds_height, bounds.x0, bounds.y0, bounds_width * kx, bounds_height * ky);
       ctx.restore();
 
       //swap and update class names
@@ -710,7 +716,7 @@ export default class Scatterplot<T> {
     switch (reason) {
       case ERenderReason.PERFORM_TRANSLATE:
         clearAutoZoomRedraw();
-        transformData(transformDelta.x, transformDelta.y, transformDelta.k);
+        transformData(transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
