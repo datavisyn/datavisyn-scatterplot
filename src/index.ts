@@ -35,6 +35,10 @@ export interface IAccessor<T> {
   (v:T) : number;
 }
 
+export enum EScaleAxes {
+  x, y, xy
+}
+
 /**
  * scatterplot options
  */
@@ -55,6 +59,9 @@ export interface IScatterplotOptions<T> {
    * default: 0.1, 10
    */
   scaleExtent?: [number, number];
+
+
+  scale?: EScaleAxes,
 
   /**
    * x accessor of the data
@@ -184,7 +191,10 @@ export default class Scatterplot<T> {
       right: 10
     },
     clickRadius: 10,
+
     scaleExtent: [0.1, 10],
+    scale: EScaleAxes.xy,
+
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -257,19 +267,21 @@ export default class Scatterplot<T> {
     this.canvasDataLayer = <HTMLCanvasElement>parent.children[0];
     this.canvasSelectionLayer = <HTMLCanvasElement>parent.children[1];
 
-
-    //register zoom
-    const zoom = d3zoom()
-      .on('start', this.onZoomStart.bind(this))
-      .on('zoom', this.onZoom.bind(this))
-      .on('end', this.onZoomEnd.bind(this))
-      .scaleExtent(this.props.scaleExtent)
-      .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
-
     //need to use d3 for d3.mouse to work
-    const $parent = select(this.parent)
-      .call(zoom)
-      .on('wheel', () => d3event.preventDefault());
+    const $parent = select(this.parent);
+
+    if (this.props.scale !== null) {
+      //register zoom
+      const zoom = d3zoom()
+        .on('start', this.onZoomStart.bind(this))
+        .on('zoom', this.onZoom.bind(this))
+        .on('end', this.onZoomEnd.bind(this))
+        .scaleExtent(this.props.scaleExtent)
+        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
+      $parent
+        .call(zoom)
+        .on('wheel', () => d3event.preventDefault());
+    }
 
     if (this.isSelectAble()) {
       const drag = d3drag()
@@ -426,14 +438,29 @@ export default class Scatterplot<T> {
     return false;
   }
 
-
   resized() {
     this.render(ERenderReason.DIRTY);
   }
 
+  private rescale(axis: EScaleAxes, scale: IScale) {
+    const c = this.currentTransform;
+    const p = this.props.scale;
+    switch(axis) {
+      case EScaleAxes.x:
+        return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
+      case EScaleAxes.y:
+        return p === EScaleAxes.y || p === EScaleAxes.xy ? c.rescaleY(scale) : scale;
+    }
+    throw new Error('Not Implemented');
+  }
+
+  private limitScaling(z: ZoomTransform) {
+    return z;
+  }
+
   private transformedScales() {
-    const xscale = this.currentTransform.rescaleX(this.props.xscale);
-    const yscale = this.currentTransform.rescaleY(this.props.yscale);
+    const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
+    const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return {xscale, yscale};
   }
 
@@ -463,8 +490,8 @@ export default class Scatterplot<T> {
   }
 
   private transformedNormalized2PixelScales() {
-    const n2pX = this.currentTransform.rescaleX(this.normalized2pixel.x);
-    const n2pY = this.currentTransform.rescaleY(this.normalized2pixel.y);
+    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
+    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
     return {n2pX, n2pY};
   };
 
@@ -488,7 +515,7 @@ export default class Scatterplot<T> {
 
   private onZoom() {
     const evt = <D3ZoomEvent<any,any>>d3event;
-    const new_:ZoomTransform = evt.transform;
+    const new_:ZoomTransform = this.limitScaling(evt.transform);
     const old = this.currentTransform;
     this.currentTransform = new_;
     const tchanged = (old.x !== new_.x || old.y !== new_.y);
