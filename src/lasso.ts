@@ -8,10 +8,11 @@ import {line as d3line, curveLinearClosed} from 'd3-shape';
 import {polygonHull, polygonContains} from 'd3-polygon';
 import {extent} from 'd3-array';
 import {hasOverlap, ITester} from './quadtree';
+import merge from './merge';
 
 declare type IPoint = [number, number];
 
-const MIN_POINT_DISTANCE2 = 10*10;
+const MIN_POINT_DISTANCE2 = 10 * 10;
 
 function distance2(a: IPoint, b: IPoint) {
   const x = a[0] - b[0];
@@ -19,10 +20,25 @@ function distance2(a: IPoint, b: IPoint) {
   return x * x + y * y;
 }
 
+export interface ILassoOptions {
+  lineWidth?: number;
+  strokeStyle?: string;
+  fillStyle?: string;
+}
+
 export default class Lasso {
+  private props: ILassoOptions = {
+    lineWidth: 5,
+    strokeStyle: 'rgba(0,0,0,1)',
+    fillStyle: 'rgba(0,0,0,0.2)'
+  };
   private line = d3line().curve(curveLinearClosed);
   private points: IPoint[] = [];
   private current: IPoint = null;
+
+  constructor(options?: ILassoOptions) {
+    merge(this.props, options);
+  }
 
   start(x: number, y: number) {
     this.clear();
@@ -73,12 +89,12 @@ export default class Lasso {
     const p = this.points;
     ctx.save();
 
-    ctx.lineWidth = 5;
-    ctx.strokeStyle = 'rgba(0,0,0,1)';
+    ctx.lineWidth = this.props.lineWidth;
+    ctx.strokeStyle = this.props.strokeStyle;
 
     if (p.length > 0) {
       this.line.context(ctx)(p);
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillStyle = this.props.fillStyle;
       ctx.fill();
       ctx.stroke();
     }

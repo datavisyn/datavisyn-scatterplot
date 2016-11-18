@@ -141,11 +141,7 @@ export interface IScatterplotOptions<T> {
    */
   isSelectEvent?(event:MouseEvent) : boolean; //=> event.ctrlKey || event.altKey
 
-  /**
-   * interval time when the lasso is evaluated
-   * default: 200
-   */
-  lassoInterval?: number;
+  lasso? : ILassoOptions & {interval? : number};
 
   /**
    * additional render elements, e.g. lines
@@ -210,7 +206,9 @@ export default class Scatterplot<T> {
 
     isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
 
-    lassoInterval: 100,
+    lasso: {
+      interval: 100
+    },
 
     extras: null
   };
@@ -515,7 +513,7 @@ export default class Scatterplot<T> {
 
   private onDrag() {
     if (this.dragHandle < 0) {
-      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lassoInterval);
+      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
     }
     this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
