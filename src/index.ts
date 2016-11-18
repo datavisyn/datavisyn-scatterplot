@@ -15,7 +15,7 @@ import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
 import * as _symbol from './symbol';
 import merge from './merge';
 import {findAll, forEachLeaf, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
-import Lasso from './lasso';
+import Lasso,{ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 
