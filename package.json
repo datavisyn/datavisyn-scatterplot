@@ -88,6 +88,15 @@
     "@types/d3-quadtree": "^1.0.4",
     "@types/d3-scale": "^1.0.4",
     "@types/d3-shape": "^1.0.5",
-    "@types/d3-zoom": "^1.0.5"
+    "@types/d3-zoom": "^1.0.5",
+	"d3-array": "^1.0.1",
+    "d3-axis": "^1.0.3",
+    "d3-drag": "^1.0.1",
+    "d3-polygon": "^1.0.1",
+    "d3-quadtree": "^1.0.1",
+    "d3-scale": "^1.0.3",
+    "d3-selection": "^1.0.2",
+    "d3-shape": "^1.0.3",
+    "d3-zoom": "^1.0.3"
   }
 }
