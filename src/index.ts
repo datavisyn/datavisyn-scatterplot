@@ -61,7 +61,7 @@ export interface IScatterplotOptions<T> {
   scaleExtent?: [number, number];
 
 
-  scale?: EScaleAxes,
+  scale?: EScaleAxes;
 
   /**
    * x accessor of the data
@@ -519,10 +519,10 @@ export default class Scatterplot<T> {
     const schanged = (old.k !== new_.k);
     const scale = this.props.scale;
     const delta = {
-      x: (scale === EScaleAxes.x || scale == EScaleAxes.xy) ? new_.x - old.x : 0,
-      y: (scale === EScaleAxes.y || scale == EScaleAxes.xy) ? new_.y - old.y: 0,
-      kx: (scale === EScaleAxes.x || scale == EScaleAxes.xy) ? new_.k / old.k: 1,
-      ky: (scale === EScaleAxes.y || scale == EScaleAxes.xy) ? new_.k / old.k: 1
+      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? new_.x - old.x : 0,
+      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.y - old.y: 0,
+      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? new_.k / old.k: 1,
+      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.k / old.k: 1
     };
     if (tchanged && schanged) {
       this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
