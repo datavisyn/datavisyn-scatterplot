@@ -192,7 +192,7 @@ export default class Scatterplot<T> {
     },
     clickRadius: 10,
 
-    scaleExtent: [0.1, 10],
+    scaleExtent: [1, +Infinity],
     scale: EScaleAxes.xy,
 
     x: (d) => (<any>d).x,
@@ -277,6 +277,7 @@ export default class Scatterplot<T> {
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(this.props.scaleExtent)
+        //.translateExtent([[0,0],[10000,10000]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(zoom)
@@ -454,10 +455,6 @@ export default class Scatterplot<T> {
     throw new Error('Not Implemented');
   }
 
-  private limitScaling(z: ZoomTransform) {
-    return z;
-  }
-
   private transformedScales() {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
@@ -515,7 +512,7 @@ export default class Scatterplot<T> {
 
   private onZoom() {
     const evt = <D3ZoomEvent<any,any>>d3event;
-    const new_:ZoomTransform = this.limitScaling(evt.transform);
+    const new_:ZoomTransform = evt.transform;
     const old = this.currentTransform;
     this.currentTransform = new_;
     const tchanged = (old.x !== new_.x || old.y !== new_.y);
