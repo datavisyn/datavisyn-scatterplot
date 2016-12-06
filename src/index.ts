@@ -14,7 +14,7 @@ import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtre
 import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
 import * as _symbol from './symbol';
 import merge from './merge';
-import {findAll, forEachLeaf, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
+import {forEachLeaf, ellipseTester, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
 import Lasso,{ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
@@ -473,17 +473,19 @@ export default class Scatterplot<T> {
       //compute the data domain radius based on xscale and the scaling factor
       const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const viewSize = transform.k * Math.min(rangeRange(this.normalized2pixel.x), rangeRange(this.normalized2pixel.y));
-      const normalizedSize = NORMALIZED_RANGE[1];
+      const viewSizeX = transform.k * rangeRange(this.normalized2pixel.x);
+      const viewSizeY = transform.k * rangeRange(this.normalized2pixel.y);
       //tranform from view to data without translation
-      const normalized = view / viewSize * normalizedSize;
+      const normalizedRange = (NORMALIZED_RANGE[1]-NORMALIZED_RANGE[0]);
+      const normalizedX = view / viewSizeX * normalizedRange;
+      const normalizedY = view / viewSizeY * normalizedRange;
       //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
-      debuglog(view, viewSize, transform.k, normalizedSize, normalized);
-      return normalized;
+      //debuglog(view, viewSize, transform.k, normalizedSize, normalized);
+      return [normalizedX, normalizedY];
     };
 
-    const clickRadius = computeClickRadius();
-    return {x: n2pX.invert(pixelpos[0]), y: n2pY.invert(pixelpos[1]), clickRadius};
+    const [clickRadiusX, clickRadiusY] = computeClickRadius();
+    return {x: n2pX.invert(pixelpos[0]), y: n2pY.invert(pixelpos[1]), clickRadiusX, clickRadiusY};
   }
 
   private transformedNormalized2PixelScales() {
@@ -578,17 +580,18 @@ export default class Scatterplot<T> {
       this.selection = [];
       return;
     }
-    const {x, y, clickRadius} = this.getMouseNormalizedPos();
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
 
     //find closest data item
-    const closest = findAll(this.tree, x, y, clickRadius);
-    this.selection = closest;
+    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    this.selectWithTester(tester);
   }
 
   private showTooltip(pos:[number, number]) {
     //highlight selected item
-    const {x, y, clickRadius} = this.getMouseNormalizedPos(pos);
-    const items = findAll(this.tree, x, y, clickRadius);
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(pos);
+    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    const items = findByTester(this.tree, tester);
     this.props.showTooltip(this.parent, items, pos[0], pos[1]);
     this.showTooltipHandle = -1;
   }

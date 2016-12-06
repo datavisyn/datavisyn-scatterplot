@@ -10,63 +10,6 @@ import {shuffle} from 'd3-array';
 export const ABORT_TRAVERSAL = true;
 export const CONTINUE_TRAVERSAL = false;
 
-/**
- * finds all data items in the tree within the given position, similar to d3.quadtree.find
- * @param tree
- * @param x
- * @param y
- * @param radius
- * @returns {Array}
- */
-export function findAll<T>(tree:Quadtree<T>, x:number, y:number, radius = Infinity) {
-  var r = [];
-  const adder = r.push.bind(r);
-  const radius2 = radius * radius;
-  //bounding of search radius
-  const overlapping = hasOverlap(x - radius, y - radius, x + radius, y + radius);
-
-  function inDistance(x1:number, y1:number) {
-    const dx = x1 - x;
-    const dy = y1 - y;
-    return (dx * dx + dy * dy) <= radius2;
-  }
-
-  function testAdder(d:T) {
-    const x1 = tree.x()(d);
-    const y1 = tree.y()(d);
-    if (inDistance(x1, y1)) {
-      adder(d);
-    }
-  }
-
-  function findItems(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0:number, y0:number, x1:number, y1:number) {
-    const xy00In = inDistance(x0, y0);
-    const xy01In = inDistance(x0, y1);
-    const xy10In = inDistance(x1, y0);
-    const xy11In = inDistance(x1, y1);
-
-    if (xy00In && xy01In && xy10In && xy11In) {
-      //all points in radius -> add all
-      forEach(node, adder);
-      return ABORT_TRAVERSAL;
-    }
-
-    if (overlapping(x0, y0, x1, y1)) {
-      //continue search
-      if (isLeafNode(node)) {
-        forEachLeaf(<QuadtreeLeaf<T>>node, testAdder);
-      }
-      return CONTINUE_TRAVERSAL;
-    }
-    return ABORT_TRAVERSAL;
-  }
-
-  tree.visit(findItems);
-
-  return r;
-}
-
-
 export interface IBoundsPredicate {
   (x0:number, y0:number, x1:number, y1:number) : boolean;
 }
@@ -74,6 +17,21 @@ export interface IBoundsPredicate {
 export interface ITester {
   test(x:number, y:number): boolean;
   testArea: IBoundsPredicate;
+}
+
+export function ellipseTester(cx: number, cy: number, radiusX: number, radiusY: number): ITester {
+  const radiusX2 = radiusX * radiusX;
+  const radiusY2 = radiusY * radiusY;
+  const overlapping = hasOverlap(cx - radiusX, cy - radiusY, cx + radiusX, cy + radiusY);
+  return {
+    test: (x: number, y: number) => {
+      // http://math.stackexchange.com/questions/76457/check-if-a-point-is-within-an-ellipse#76463
+      // \frac{(x-h)^2}{r_x^2} + \frac{(y-k)^2}{r_y^2} \leq 1
+      // (x-cx)^2/radiusX^2 + (y-cy)^2/(radiusY^2) <= 1
+      return ((x-cx)*(x-cx) / radiusX2 + (y-cy)*(y-cy)/ radiusY2) <= 1;
+    },
+    testArea: overlapping
+  };
 }
 
 /**
