@@ -492,7 +492,7 @@ export default class Scatterplot<T> {
     const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
     const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
     return {n2pX, n2pY};
-  };
+  }
 
   private onZoomStart() {
     this.zoomStartTransform = this.currentTransform;
