@@ -551,12 +551,27 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private window2transform(window: IWindow) {
     const range2transform = (minMax: [number, number], scale: IScale) => {
-      // TODO
+      const pmin = scale(minMax[0]);
+      const pmax = scale(minMax[1]);
+      const k = (scale.range()[1] - scale.range()[0])/(pmax - pmin);
+      return { k, t : (scale.range()[0] - pmin) };
     };
-    const k = 0;
-    const tx = 0;
-    const ty = 0;
-    return { k, tx, ty};
+    const s = this.props.zoom.scale;
+    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale): null;
+    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale): null;
+    let k = 1;
+    if (x && y) {
+      k = Math.min(x.k, y.k);
+    } else if (x) {
+      k = x.k;
+    } else if(y) {
+      k = y.k;
+    }
+    return {
+      k,
+      tx: x ? x.t : 0,
+      ty: y ? y.t : 0
+    };
   }
 
   /**
