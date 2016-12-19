@@ -197,12 +197,14 @@ export enum ERenderReason {
   AFTER_SCALE
 }
 
+export declare type IMinMax = [number, number];
+
 /**
  * visible window
  */
 export interface IWindow {
-  xMinMax: [number, number];
-  yMinMax: [number, number];
+  xMinMax: IMinMax;
+  yMinMax: IMinMax;
 }
 
 
@@ -545,10 +547,11 @@ export default class Scatterplot<T> extends EventEmitter {
     const $zoom = select(this.parent);
     this.zoomBehavior.scaleTo($zoom, k);
     this.zoomBehavior.translateBy($zoom, tx, ty);
+    this.render();
   }
 
   private window2transform(window: IWindow) {
-    const range2transform = (minMax: [number, number], scale: IScale) => {
+    const range2transform = (minMax: IMinMax, scale: IScale) => {
       const pmin = scale(minMax[0]);
       const pmax = scale(minMax[1]);
       const k = (scale.range()[1] - scale.range()[0])/(pmax - pmin);
@@ -573,14 +576,25 @@ export default class Scatterplot<T> extends EventEmitter {
   }
 
   /**
+   * returns the total domain
+   * @returns {{xMinMax: number[], yMinMax: number[]}}
+   */
+  get domain(): IWindow {
+    return {
+      xMinMax: <IMinMax>this.props.xscale.domain(),
+      yMinMax: <IMinMax>this.props.yscale.domain(),
+    };
+  }
+
+  /**
    * returns the current visible window
    * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
    */
   get window() : IWindow {
     const {xscale, yscale} = this.transformedScales();
     return {
-      xMinMax: <[number, number]>(xscale.range().map(xscale.invert.bind(xscale))),
-      yMinMax: <[number, number]>(yscale.range().map(yscale.invert.bind(yscale)))
+      xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
+      yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))
     };
   }
 
