@@ -8,7 +8,7 @@ import './style.scss';
 import {axisLeft, axisBottom, AxisScale} from 'd3-axis';
 import * as d3scale from 'd3-scale';
 import {select, mouse, event as d3event} from 'd3-selection';
-import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity} from 'd3-zoom';
+import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
 import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
@@ -18,6 +18,7 @@ import {forEachLeaf, ellipseTester, isLeafNode, hasOverlap, getTreeSize, findByT
 import Lasso,{ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
+import {EventEmitter} from 'events';
 
 /**
  * a d3 scale essentially
@@ -136,12 +137,6 @@ export interface IScatterplotOptions<T> {
   showTooltip?(parent:HTMLElement, items:T[], x:number, y:number);
 
   /**
-   * hook when the selection has changed
-   * default: none
-   */
-  onSelectionChanged?();
-
-  /**
    * determines whether the given mouse is a selection or panning event, if `null` or `false` selection is disabled
    * default: event.ctrlKey || event.altKey
    *
@@ -177,11 +172,19 @@ export enum ERenderReason {
   AFTER_SCALE
 }
 
+export interface IWindow {
+  xMinMax: [number, number];
+  yMinMax: [number, number];
+}
+
 
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class Scatterplot<T> {
+export default class Scatterplot<T> extends EventEmitter {
+  static EVENT_SELECTION_CHANGED = 'selectionChanged';
+  static EVENT_RENDER = 'render';
+  static EVENT_WINDOW_CHANGED = 'windowChanged';
 
   private props:IScatterplotOptions<T> = {
     margin: {
@@ -212,8 +215,6 @@ export default class Scatterplot<T> {
 
     showTooltip: showTooltip,
 
-    onSelectionChanged: ()=>undefined,
-
     isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
 
     lasso: {
@@ -224,7 +225,7 @@ export default class Scatterplot<T> {
   };
 
 
-  private normalized2pixel = {
+  private readonly normalized2pixel = {
     x: d3scale.scaleLinear().domain(NORMALIZED_RANGE),
     y: d3scale.scaleLinear().domain(NORMALIZED_RANGE)
   };
@@ -239,14 +240,16 @@ export default class Scatterplot<T> {
    */
   private showTooltipHandle = -1;
 
-  private lasso = new Lasso();
+  private readonly lasso = new Lasso();
 
   private currentTransform:ZoomTransform = zoomIdentity;
+  private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
   private zoomStartTransform:ZoomTransform;
   private zommHandle = -1;
   private dragHandle = -1;
 
   constructor(data:T[], private parent:HTMLElement, props?:IScatterplotOptions<T>) {
+    super();
     this.props = merge(this.props, props);
 
     //init dom
@@ -272,7 +275,7 @@ export default class Scatterplot<T> {
 
     if (this.props.scale !== null) {
       //register zoom
-      const zoom = d3zoom()
+      this.zoomBehavior = d3zoom()
         .on('start', this.onZoomStart.bind(this))
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
@@ -280,7 +283,7 @@ export default class Scatterplot<T> {
         //.translateExtent([[0,0],[10000,10000]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
-        .call(zoom)
+        .call(this.zoomBehavior)
         .on('wheel', () => d3event.preventDefault());
     }
 
@@ -362,7 +365,7 @@ export default class Scatterplot<T> {
       return this.clearSelection();
     }
     //find the delta
-    var changed = false;
+    let changed = false;
     const s = this.selection.slice();
     selection.forEach((s_new) => {
       const i = s.indexOf(s_new);
@@ -377,7 +380,7 @@ export default class Scatterplot<T> {
     //remove removed items
     this.selectionTree.removeAll(s);
     if (changed) {
-      this.props.onSelectionChanged.call(this);
+      this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
@@ -390,7 +393,7 @@ export default class Scatterplot<T> {
     const changed = this.selectionTree !== null && this.selectionTree.size() > 0;
     if (changed) {
       this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
-      this.props.onSelectionChanged.call(this);
+      this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
@@ -405,7 +408,7 @@ export default class Scatterplot<T> {
       return false;
     }
     this.selectionTree.addAll(items);
-    this.props.onSelectionChanged.call(this);
+    this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
     this.render(ERenderReason.SELECTION_CHANGED);
     return true;
   }
@@ -419,7 +422,7 @@ export default class Scatterplot<T> {
       return false;
     }
     this.selectionTree.removeAll(items);
-    this.props.onSelectionChanged.call(this);
+      this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
     this.render(ERenderReason.SELECTION_CHANGED);
     return true;
   }
@@ -494,6 +497,39 @@ export default class Scatterplot<T> {
     return {n2pX, n2pY};
   }
 
+  /**
+   * sets the current visible window
+   * @param window
+   */
+  set window(window: IWindow) {
+    const {k, tx, ty} = this.window2transform(window);
+    const $zoom = select(this.parent);
+    this.zoomBehavior.scaleTo($zoom, k);
+    this.zoomBehavior.translateBy($zoom, tx, ty);
+  }
+
+  private window2transform(window: IWindow) {
+    const range2transform = (minMax: [number, number], scale: IScale) => {
+      // TODO
+    };
+    const k = 0;
+    const tx = 0;
+    const ty = 0;
+    return { k, tx, ty};
+  }
+
+  /**
+   * returns the current visible window
+   * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
+   */
+  get window() : IWindow {
+    const {xscale, yscale} = this.transformedScales();
+    return {
+      xMinMax: <[number, number]>(xscale.range().map(xscale.invert.bind(xscale))),
+      yMinMax: <[number, number]>(yscale.range().map(yscale.invert.bind(yscale)))
+    };
+  }
+
   private onZoomStart() {
     this.zoomStartTransform = this.currentTransform;
   }
@@ -527,10 +563,13 @@ export default class Scatterplot<T> {
       ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.k / old.k: 1
     };
     if (tchanged && schanged) {
+      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
       this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
     } else if (schanged) {
+      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
       this.render(ERenderReason.PERFORM_SCALE, delta);
     } else if (tchanged) {
+      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
       this.render(ERenderReason.PERFORM_TRANSLATE, delta);
     }
     //nothing if no changed
@@ -622,6 +661,9 @@ export default class Scatterplot<T> {
       bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
       bounds_width = bounds.x1 - bounds.x0,
       bounds_height = bounds.y1 - bounds.y0;
+
+    // emit render reason as string
+    this.emit(Scatterplot.EVENT_RENDER, ERenderReason[reason], transformDelta);
 
     if (reason === ERenderReason.DIRTY) {
       this.props.xscale.range([bounds.x0, bounds.x1]);
@@ -770,7 +812,7 @@ export default class Scatterplot<T> {
     //}
 
     //debug stats
-    var rendered = 0, aggregated = 0, hidden = 0;
+    let rendered = 0, aggregated = 0, hidden = 0;
 
     function visitTree(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0:number, y0:number, x1:number, y1:number) {
       if (!isNodeVisible(x0, y0, x1, y1)) {
