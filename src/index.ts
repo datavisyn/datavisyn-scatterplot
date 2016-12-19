@@ -40,6 +40,37 @@ export enum EScaleAxes {
   x, y, xy
 }
 
+export interface IZoomOptions {
+  /**
+   * scaling option whether to scale both, one, or no axis
+   */
+  scale?: EScaleAxes;
+
+  /**
+   * delay before a full redraw is shown during zooming
+   */
+  delay?: number;
+  /**
+   * min max scaling factor
+   * default: 0.1, 10
+   */
+  scaleExtent?: [number, number];
+
+  /**
+   * initial zoom window
+   */
+  window?: IWindow;
+
+  /**
+   * initial scale factor
+   */
+  scaleTo?: number;
+  /**
+   * initial translate
+   */
+  translateBy?: [number, number];
+}
+
 /**
  * scatterplot options
  */
@@ -55,14 +86,7 @@ export interface IScatterplotOptions<T> {
     bottom?: number;
   };
 
-  /**
-   * min max scaling factor
-   * default: 0.1, 10
-   */
-  scaleExtent?: [number, number];
-
-
-  scale?: EScaleAxes;
+  zoom?: IZoomOptions;
 
   /**
    * x accessor of the data
@@ -121,11 +145,6 @@ export interface IScatterplotOptions<T> {
   tooltipDelay?: number;
 
   /**
-   * delay before a full redraw is shown during zooming
-   */
-  zoomDelay?: number;
-
-  /**
    * shows the tooltip
    * default: simple popup similar to bootstrap
    * if `null` or `false` tooltips are disabled
@@ -143,7 +162,15 @@ export interface IScatterplotOptions<T> {
    */
   isSelectEvent?(event:MouseEvent) : boolean; //=> event.ctrlKey || event.altKey
 
-  lasso? : ILassoOptions & {interval? : number};
+  /**
+   * lasso options
+   */
+  lasso? : ILassoOptions & {
+    /**
+     * lasso update frequency to improve performance
+     */
+    interval? : number
+  };
 
   /**
    * additional render elements, e.g. lines
@@ -172,6 +199,9 @@ export enum ERenderReason {
   AFTER_SCALE
 }
 
+/**
+ * visible window
+ */
 export interface IWindow {
   xMinMax: [number, number];
   yMinMax: [number, number];
@@ -195,8 +225,14 @@ export default class Scatterplot<T> extends EventEmitter {
     },
     clickRadius: 10,
 
-    scaleExtent: [1, +Infinity],
-    scale: EScaleAxes.xy,
+    zoom: {
+      scale: EScaleAxes.xy,
+      delay: 300,
+      scaleExtent: [1, +Infinity],
+      window: null,
+      scaleTo: 1,
+      translateBy: [0, 0],
+    },
 
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
@@ -210,8 +246,6 @@ export default class Scatterplot<T> extends EventEmitter {
     symbol: <ISymbol<T>>circleSymbol(),
 
     tooltipDelay: 500,
-
-    zoomDelay: 300,
 
     showTooltip: showTooltip,
 
@@ -273,18 +307,25 @@ export default class Scatterplot<T> extends EventEmitter {
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
 
-    if (this.props.scale !== null) {
+    if (this.props.zoom.scale !== null) {
+      const zoom = this.props.zoom;
       //register zoom
       this.zoomBehavior = d3zoom()
         .on('start', this.onZoomStart.bind(this))
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
-        .scaleExtent(this.props.scaleExtent)
+        .scaleExtent(zoom.scaleExtent)
         //.translateExtent([[0,0],[10000,10000]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(this.zoomBehavior)
         .on('wheel', () => d3event.preventDefault());
+      if (zoom.window != null) {
+        this.window = zoom.window;
+      } else {
+        this.zoomBehavior.scaleTo($parent, zoom.scaleTo);
+        this.zoomBehavior.translateBy($parent, zoom.translateBy[0], zoom.translateBy[1]);
+      }
     }
 
     if (this.isSelectAble()) {
@@ -448,7 +489,7 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private rescale(axis: EScaleAxes, scale: IScale) {
     const c = this.currentTransform;
-    const p = this.props.scale;
+    const p = this.props.zoom.scale;
     switch(axis) {
       case EScaleAxes.x:
         return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
@@ -555,7 +596,7 @@ export default class Scatterplot<T> extends EventEmitter {
     this.currentTransform = new_;
     const tchanged = (old.x !== new_.x || old.y !== new_.y);
     const schanged = (old.k !== new_.k);
-    const scale = this.props.scale;
+    const scale = this.props.zoom.scale;
     const delta = {
       x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? new_.x - old.x : 0,
       y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.y - old.y: 0,
@@ -762,7 +803,7 @@ export default class Scatterplot<T> extends EventEmitter {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zommHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
+        this.zommHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
