@@ -4,15 +4,13 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import './style.scss';
 import {axisLeft, axisBottom, AxisScale} from 'd3-axis';
-import * as d3scale from 'd3-scale';
+import {scaleLinear} from 'd3-scale';
 import {select, mouse, event as d3event} from 'd3-selection';
 import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
 import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
-import * as _symbol from './symbol';
 import merge from './merge';
 import {forEachLeaf, ellipseTester, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
 import Lasso,{ILassoOptions} from './lasso';
@@ -240,8 +238,8 @@ export default class Scatterplot<T> extends EventEmitter {
     xlabel: 'x',
     ylabel: 'y',
 
-    xscale: <IScale>d3scale.scaleLinear().domain([0, 100]),
-    yscale: <IScale>d3scale.scaleLinear().domain([0, 100]),
+    xscale: <IScale>scaleLinear().domain([0, 100]),
+    yscale: <IScale>scaleLinear().domain([0, 100]),
 
     symbol: <ISymbol<T>>circleSymbol(),
 
@@ -260,8 +258,8 @@ export default class Scatterplot<T> extends EventEmitter {
 
 
   private readonly normalized2pixel = {
-    x: d3scale.scaleLinear().domain(NORMALIZED_RANGE),
-    y: d3scale.scaleLinear().domain(NORMALIZED_RANGE)
+    x: scaleLinear().domain(NORMALIZED_RANGE),
+    y: scaleLinear().domain(NORMALIZED_RANGE)
   };
   private canvasDataLayer:HTMLCanvasElement;
   private canvasSelectionLayer:HTMLCanvasElement;
@@ -904,14 +902,4 @@ export default class Scatterplot<T> extends EventEmitter {
 
     ctx.restore();
   }
-}
-
-/**
- * reexport d3 scale
- */
-export const scale = d3scale;
-export const symbol = _symbol;
-
-export function create<T>(data:T[], canvas:HTMLCanvasElement):Scatterplot<T> {
-  return new Scatterplot(data, canvas);
 }
