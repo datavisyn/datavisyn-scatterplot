@@ -14,6 +14,8 @@ export {default as Scatterplot, EScaleAxes, IAccessor, IScale, IScatterplotOptio
 export const scale = d3scale;
 export const symbol = _symbol;
 
+export default Scatterplot;
+
 export function create<T>(data:T[], canvas:HTMLCanvasElement):Scatterplot<T> {
   return new Scatterplot(data, canvas);
 }
