@@ -28,7 +28,7 @@ export interface IScale extends AxisScale<number>, ZoomScale {
   domain(): number[];
   domain(domain:number[]);
   invert(v:number): number;
-  copy(): IScale;
+  copy(): this;
 }
 
 export interface IAccessor<T> {
