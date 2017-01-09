@@ -30,7 +30,7 @@ function showTooltipAt(tooltip: HTMLElement, x: number, y: number) {
 
 function toString(d: any) {
   if (typeof d.toString === 'function') {
-    let s = d.toString();
+    const s = d.toString();
     if (s !== '[object Object]') {
       return s;
     }

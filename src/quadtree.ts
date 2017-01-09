@@ -41,7 +41,7 @@ export function ellipseTester(cx: number, cy: number, radiusX: number, radiusY: 
  * @returns {Array}
  */
 export function findByTester<T>(tree:Quadtree<T>, tester:ITester):T[] {
-  let r = [];
+  const r = [];
   const adder = r.push.bind(r);
 
   function testAdder(d:T) {
@@ -94,7 +94,7 @@ export function forEachLeaf<T>(node:QuadtreeLeaf<T>, callback:(d:T)=>void) {
   let leaf = node;
   //see https://github.com/d3/d3-quadtree
   do {
-    let d = leaf.data;
+    const d = leaf.data;
     i++;
     callback(d);
   } while ((leaf = leaf.next) != null);
@@ -178,7 +178,7 @@ export function getFirstLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):
  */
 export function getRandomLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):T {
   if (isLeafNode(node)) {
-    let sub = getTreeData(node);
+    const sub = getTreeData(node);
     return sub[getRandomInt(0, sub.length)];
   } else {
     //manually visit the children
