@@ -16,7 +16,7 @@ import {forEachLeaf, ellipseTester, isLeafNode, hasOverlap, getTreeSize, findByT
 import Lasso,{ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
-import {EventEmitter} from 'events';
+import {EventEmitter} from 'eventemitter3';
 
 /**
  * a d3 scale essentially
