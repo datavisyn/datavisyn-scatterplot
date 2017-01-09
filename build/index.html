@@ -14,6 +14,7 @@
   </label>
 <section>
 <div style="width: 520px; height: 500px"></div>
+<div id="minimap" style="width: 250px; height: 250px"></div>
 </section>
 <section>
 <pre>
@@ -40,7 +41,7 @@
       var div = document.querySelector('div');
       div.innerHTML = ''; //clear existing stuff
 
-      var s = new datavisyn.scatterplot.default(data, div);
+      var s = new datavisyn.scatterplot.Scatterplot(data, div);
       //hack render to have information
       var bak = s.render.bind(s);
       s.render = function() {
@@ -48,6 +49,9 @@
         bak.apply(s, [].slice.call(arguments));
         console.timeEnd('render');
       };
+
+      var m = new datavisyn.scatterplot.MiniMap(s, document.querySelector('#minimap'));
+
       s.render();
     }
 

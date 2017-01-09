@@ -98,3 +98,12 @@
     }
   }
 }
+
+.datavisyn-scatterplot-minimap {
+  position: relative;
+  background-color: gray;
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}

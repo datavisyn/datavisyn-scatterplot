@@ -10,23 +10,25 @@ import merge from './merge';
 import {cssprefix} from './constants';
 
 export interface IMiniMapOptions {
-
+  scale?: EScaleAxes;
 }
 
 export default class MiniMap {
   private readonly brush: BrushBehavior<any>;
-  private readonly props: IMiniMapOptions = {};
+  private readonly props: IMiniMapOptions = {
+    scale: EScaleAxes.xy
+  };
 
   private readonly xscale = scaleLinear();
   private readonly yscale = scaleLinear();
   private readonly node: SVGGElement;
 
-  constructor(private parent: HTMLElement, private plot: Scatterplot<any>, private scale: EScaleAxes, props: IMiniMapOptions = {}) {
+  constructor(private plot: Scatterplot<any>, private parent: HTMLElement, props: IMiniMapOptions = {}) {
     this.props = merge(this.props, props);
     parent.innerHTML = `<svg class="${cssprefix}-minimap"><g></g></svg>`;
     parent.classList.add(cssprefix);
 
-    switch (scale) {
+    switch (this.props.scale) {
       case EScaleAxes.x:
         this.brush = brushX();
         break;
@@ -40,12 +42,11 @@ export default class MiniMap {
     const d = plot.domain;
     this.xscale.domain(d.xMinMax);
     this.yscale.domain(d.yMinMax);
-
     const $node = select(parent).select('svg > g').call(this.brush);
     this.node = <SVGGElement>$node.node();
 
     this.update(plot.window);
-    this.brush.on('brush', this.brushed.bind(this));
+    $node.call(this.brush.on('brush', this.brushed.bind(this)));
     plot.on(Scatterplot.EVENT_WINDOW_CHANGED, this.update.bind(this));
   }
 
@@ -56,7 +57,7 @@ export default class MiniMap {
 
     let sx: IMinMax;
     let sy: IMinMax;
-    switch (this.scale) {
+    switch (this.props.scale) {
       case EScaleAxes.x:
         sx = <IMinMax>s;
         xMinMax = <IMinMax>sx.map(this.xscale.invert.bind(this.xscale));
@@ -75,12 +76,14 @@ export default class MiniMap {
   }
 
   private update(window: IWindow) {
-    this.xscale.range([0, this.node.clientWidth]);
-    this.yscale.range([0, this.node.clientHeight]);
+    this.xscale.range([0, this.parent.clientWidth]);
+    this.yscale.range([0, this.parent.clientHeight]);
+    this.node.parentElement.setAttribute('width', this.parent.clientWidth.toString());
+    this.node.parentElement.setAttribute('height', this.parent.clientHeight.toString());
     this.brush.extent([<IMinMax>this.xscale.range(), <IMinMax>this.yscale.range()]);
 
     const $node = select<SVGGElement,any>(this.node);
-    switch (this.scale) {
+    switch (this.props.scale) {
       case EScaleAxes.x:
         this.brush.move($node, window.xMinMax.map(this.xscale));
         break;
