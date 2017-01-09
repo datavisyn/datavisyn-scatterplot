@@ -83,6 +83,7 @@
     "@types/d3-shape": "^1.0.5",
     "@types/d3-zoom": "^1.0.5",
     "@types/node": "^6.0.58",
+    "events": "^1.1.1",
     "d3-array": "^1.0.1",
     "d3-axis": "^1.0.3",
     "d3-brush": "^1.0.3",
