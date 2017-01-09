@@ -27,7 +27,7 @@ export interface IScale extends AxisScale<number>, ZoomScale {
   domain(): number[];
   domain(domain:number[]);
   invert(v:number): number;
-  copy(): IScale;
+  copy(): this;
 }
 
 export interface IAccessor<T> {
@@ -247,7 +247,7 @@ export default class Scatterplot<T> extends EventEmitter {
 
     tooltipDelay: 500,
 
-    showTooltip: showTooltip,
+    showTooltip,
 
     isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
 
@@ -408,10 +408,10 @@ export default class Scatterplot<T> extends EventEmitter {
     //find the delta
     let changed = false;
     const s = this.selection.slice();
-    selection.forEach((s_new) => {
-      const i = s.indexOf(s_new);
+    selection.forEach((sNew) => {
+      const i = s.indexOf(sNew);
       if (i < 0) { //new
-        this.selectionTree.add(s_new);
+        this.selectionTree.add(sNew);
         changed = true;
       } else {
         s.splice(i, 1); //mark as used
@@ -618,17 +618,17 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private onZoom() {
     const evt = <D3ZoomEvent<any,any>>d3event;
-    const new_:ZoomTransform = evt.transform;
-    const old = this.currentTransform;
-    this.currentTransform = new_;
-    const tchanged = (old.x !== new_.x || old.y !== new_.y);
-    const schanged = (old.k !== new_.k);
+    const newValue:ZoomTransform = evt.transform;
+    const oldValue = this.currentTransform;
+    this.currentTransform = newValue;
+    const tchanged = (oldValue.x !== newValue.x || oldValue.y !== newValue.y);
+    const schanged = (oldValue.k !== newValue.k);
     const scale = this.props.zoom.scale;
     const delta = {
-      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? new_.x - old.x : 0,
-      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.y - old.y: 0,
-      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? new_.k / old.k: 1,
-      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? new_.k / old.k: 1
+      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
+      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y: 0,
+      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k: 1,
+      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k: 1
     };
     if (tchanged && schanged) {
       this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
@@ -727,8 +727,8 @@ export default class Scatterplot<T> extends EventEmitter {
     const c = this.canvasDataLayer,
       margin = this.props.margin,
       bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
-      bounds_width = bounds.x1 - bounds.x0,
-      bounds_height = bounds.y1 - bounds.y0;
+      boundsWidth = bounds.x1 - bounds.x0,
+      boundsHeight = bounds.y1 - bounds.y0;
 
     // emit render reason as string
     this.emit(Scatterplot.EVENT_RENDER, ERenderReason[reason], transformDelta);
@@ -754,8 +754,8 @@ export default class Scatterplot<T> extends EventEmitter {
       y0 = n2pY(y0);
       x1 = n2pX(x1);
       y1 = n2pY(y1);
-      const min_size = Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
-      return min_size < 5; //TODO tune depend on visual impact
+      const minSize = Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
+      return minSize < 5; //TODO tune depend on visual impact
     }
 
 
@@ -763,7 +763,7 @@ export default class Scatterplot<T> extends EventEmitter {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, bounds_width, bounds_height);
+      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
       const tree = isSelection ? this.selectionTree : this.tree;
       const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL);
@@ -781,7 +781,7 @@ export default class Scatterplot<T> extends EventEmitter {
     };
 
     const renderSelection = !this.isSelectAble() && !this.hasExtras() ? ()=>undefined : () => {
-      let ctx = renderCtx(true);
+      const ctx = renderCtx(true);
       this.lasso.render(ctx);
     };
 
@@ -790,7 +790,7 @@ export default class Scatterplot<T> extends EventEmitter {
       const ctx = this.canvasSelectionLayer.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, bounds_width, bounds_height);
+      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
 
       //ctx.translate(bounds.x0, bounds.y0+bounds_height); //move to visible area
@@ -801,7 +801,7 @@ export default class Scatterplot<T> extends EventEmitter {
       //copy just the visible area
       //canvas, clip area, target area
       //see http://www.w3schools.com/tags/canvas_drawimage.asp
-      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, bounds_width, bounds_height, bounds.x0, bounds.y0, bounds_width * kx, bounds_height * ky);
+      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, boundsWidth, boundsHeight, bounds.x0, bounds.y0, boundsWidth * kx, boundsHeight * ky);
       ctx.restore();
 
       //swap and update class names
@@ -888,7 +888,7 @@ export default class Scatterplot<T> extends EventEmitter {
         return ABORT_TRAVERSAL;
       }
       if (useAggregation(x0, y0, x1, y1)) {
-        let d = getFirstLeaf(node);
+        const d = getFirstLeaf(node);
         //debuglog('aggregate', getTreeSize(node));
         rendered++;
         aggregated += debug ? (getTreeSize(node) - 1) : 0;

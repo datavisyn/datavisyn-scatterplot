@@ -12,7 +12,7 @@ const template = `<div class="${cssprefix}-tooltip" role="tooltip">
 </div>`;
 
 function findTooltip(parent: HTMLElement, ensureExists = true) {
-  var tooltip = <HTMLElement>parent.querySelector(`div.${cssprefix}-tooltip`);
+  let tooltip = <HTMLElement>parent.querySelector(`div.${cssprefix}-tooltip`);
   if (!tooltip && ensureExists) {
     tooltip = document.createElement('div'); //helper
     tooltip.innerHTML = template;
