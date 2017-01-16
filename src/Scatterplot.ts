@@ -621,9 +621,9 @@ export default class Scatterplot<T> extends EventEmitter {
     const newValue:ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
-    const tchanged = (oldValue.x !== newValue.x || oldValue.y !== newValue.y);
-    const schanged = (oldValue.k !== newValue.k);
     const scale = this.props.zoom.scale;
+    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
+    const schanged = (oldValue.k !== newValue.k);
     const delta = {
       x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
       y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y: 0,
