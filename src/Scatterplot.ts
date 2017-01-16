@@ -4,7 +4,8 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import {axisLeft, axisBottom, AxisScale} from 'd3-axis';
+import {axisLeft, axisBottom, AxisScale, Axis} from 'd3-axis';
+import {format} from 'd3-format';
 import {scaleLinear} from 'd3-scale';
 import {select, mouse, event as d3event} from 'd3-selection';
 import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
@@ -12,8 +13,20 @@ import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
 import merge from './merge';
-import {forEachLeaf, ellipseTester, isLeafNode, hasOverlap, getTreeSize, findByTester, getFirstLeaf, ABORT_TRAVERSAL, CONTINUE_TRAVERSAL, IBoundsPredicate, ITester} from './quadtree';
-import Lasso,{ILassoOptions} from './lasso';
+import {
+  forEachLeaf,
+  ellipseTester,
+  isLeafNode,
+  hasOverlap,
+  getTreeSize,
+  findByTester,
+  getFirstLeaf,
+  ABORT_TRAVERSAL,
+  CONTINUE_TRAVERSAL,
+  IBoundsPredicate,
+  ITester
+} from './quadtree';
+import Lasso, {ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
@@ -22,16 +35,16 @@ import {EventEmitter} from 'eventemitter3';
  * a d3 scale essentially
  */
 export interface IScale extends AxisScale<number>, ZoomScale {
-  range(range:number[]);
+  range(range: number[]);
   range(): number[];
   domain(): number[];
-  domain(domain:number[]);
-  invert(v:number): number;
+  domain(domain: number[]);
+  invert(v: number): number;
   copy(): this;
 }
 
 export interface IAccessor<T> {
-  (v:T) : number;
+  (v: T): number;
 }
 
 export enum EScaleAxes {
@@ -69,6 +82,17 @@ export interface IZoomOptions {
   translateBy?: [number, number];
 }
 
+export interface IFormatOptions {
+  /**
+   * d3 format used for formatting the x axis
+   */
+  x?: string | ((n: number) => string);
+  /**
+   * d3 format used for formatting the y axis
+   */
+  y?: string | ((n: number) => string);
+}
+
 /**
  * scatterplot options
  */
@@ -86,12 +110,14 @@ export interface IScatterplotOptions<T> {
 
   zoom?: IZoomOptions;
 
+  format?: IFormatOptions;
+
   /**
    * x accessor of the data
    * default: d.x
    * @param d
    */
-  x?:IAccessor<T>;
+  x?: IAccessor<T>;
 
   /**
    * x axis label
@@ -110,25 +136,25 @@ export interface IScatterplotOptions<T> {
    * default: d.y
    * @param d
    */
-  y?:IAccessor<T>;
+  y?: IAccessor<T>;
 
   /**
    * d3 x scale
    * default: linear scale with a domain from 0...100
    */
-  xscale?:IScale;
+  xscale?: IScale;
 
   /**
    * d3 y scale
    * default: linear scale with a domain from 0...100
    */
-  yscale?:IScale;
+  yscale?: IScale;
 
   /**
    * symbol used to render an data point
    * default: steelblue circle
    */
-  symbol?:ISymbol<T>;
+    symbol?: ISymbol<T>;
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -151,23 +177,23 @@ export interface IScatterplotOptions<T> {
    * @param x the x position relative to the plot
    * @param y the y position relative to the plot
    */
-  showTooltip?(parent:HTMLElement, items:T[], x:number, y:number);
+  showTooltip?(parent: HTMLElement, items: T[], x: number, y: number);
 
   /**
    * determines whether the given mouse is a selection or panning event, if `null` or `false` selection is disabled
    * default: event.ctrlKey || event.altKey
    *
    */
-  isSelectEvent?(event:MouseEvent) : boolean; //=> event.ctrlKey || event.altKey
+  isSelectEvent?(event: MouseEvent): boolean; //=> event.ctrlKey || event.altKey
 
   /**
    * lasso options
    */
-  lasso? : ILassoOptions & {
+  lasso?: ILassoOptions & {
     /**
      * lasso update frequency to improve performance
      */
-    interval? : number
+    interval?: number
   };
 
   /**
@@ -216,7 +242,7 @@ export default class Scatterplot<T> extends EventEmitter {
   static EVENT_RENDER = 'render';
   static EVENT_WINDOW_CHANGED = 'windowChanged';
 
-  private props:IScatterplotOptions<T> = {
+  private props: IScatterplotOptions<T> = {
     margin: {
       left: 32,
       top: 10,
@@ -249,7 +275,7 @@ export default class Scatterplot<T> extends EventEmitter {
 
     showTooltip,
 
-    isSelectEvent: (event:MouseEvent) => event.ctrlKey || event.altKey,
+    isSelectEvent: (event: MouseEvent) => event.ctrlKey || event.altKey,
 
     lasso: {
       interval: 100
@@ -263,10 +289,10 @@ export default class Scatterplot<T> extends EventEmitter {
     x: scaleLinear().domain(NORMALIZED_RANGE),
     y: scaleLinear().domain(NORMALIZED_RANGE)
   };
-  private canvasDataLayer:HTMLCanvasElement;
-  private canvasSelectionLayer:HTMLCanvasElement;
-  private tree:Quadtree<T>;
-  private selectionTree:Quadtree<T>;
+  private canvasDataLayer: HTMLCanvasElement;
+  private canvasSelectionLayer: HTMLCanvasElement;
+  private tree: Quadtree<T>;
+  private selectionTree: Quadtree<T>;
 
   /**
    * timout handle when the tooltip is shown
@@ -276,20 +302,20 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private readonly lasso = new Lasso();
 
-  private currentTransform:ZoomTransform = zoomIdentity;
+  private currentTransform: ZoomTransform = zoomIdentity;
   private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
-  private zoomStartTransform:ZoomTransform;
+  private zoomStartTransform: ZoomTransform;
   private zommHandle = -1;
   private dragHandle = -1;
 
-  constructor(data:T[], private parent:HTMLElement, props?:IScatterplotOptions<T>) {
+  constructor(data: T[], private parent: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
 
     //init dom
     parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"': ''}></canvas>
+      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},0)"><g>
       </svg>
@@ -390,7 +416,7 @@ export default class Scatterplot<T> extends EventEmitter {
    * sets the current selection
    * @param selection
    */
-  set selection(selection:T[]) {
+  set selection(selection: T[]) {
     this.setSelection(selection);
   }
 
@@ -444,7 +470,7 @@ export default class Scatterplot<T> extends EventEmitter {
    * shortcut to add items to the selection
    * @param items
    */
-  addToSelection(items:T[]) {
+  addToSelection(items: T[]) {
     if (items.length === 0 || !this.isSelectAble()) {
       return false;
     }
@@ -458,17 +484,17 @@ export default class Scatterplot<T> extends EventEmitter {
    * shortcut to remove items from the selection
    * @param items
    */
-  removeFromSelection(items:T[]) {
+  removeFromSelection(items: T[]) {
     if (items.length === 0 || !this.isSelectAble()) {
       return false;
     }
     this.selectionTree.removeAll(items);
-      this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
+    this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
     this.render(ERenderReason.SELECTION_CHANGED);
     return true;
   }
 
-  private selectWithTester(tester:ITester) {
+  private selectWithTester(tester: ITester) {
     const selection = findByTester(this.tree, tester);
     return this.setSelection(selection);
   }
@@ -490,7 +516,7 @@ export default class Scatterplot<T> extends EventEmitter {
   private rescale(axis: EScaleAxes, scale: IScale) {
     const c = this.currentTransform;
     const p = this.props.zoom.scale;
-    switch(axis) {
+    switch (axis) {
       case EScaleAxes.x:
         return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
       case EScaleAxes.y:
@@ -506,9 +532,9 @@ export default class Scatterplot<T> extends EventEmitter {
   }
 
   private getMouseNormalizedPos(pixelpos = mouse(this.parent)) {
-    const { n2pX, n2pY} = this.transformedNormalized2PixelScales();
+    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
-    function rangeRange(s:IScale) {
+    function rangeRange(s: IScale) {
       const range = s.range();
       return Math.abs(range[1] - range[0]);
     }
@@ -520,7 +546,7 @@ export default class Scatterplot<T> extends EventEmitter {
       const viewSizeX = transform.k * rangeRange(this.normalized2pixel.x);
       const viewSizeY = transform.k * rangeRange(this.normalized2pixel.y);
       //tranform from view to data without translation
-      const normalizedRange = (NORMALIZED_RANGE[1]-NORMALIZED_RANGE[0]);
+      const normalizedRange = (NORMALIZED_RANGE[1] - NORMALIZED_RANGE[0]);
       const normalizedX = view / viewSizeX * normalizedRange;
       const normalizedY = view / viewSizeY * normalizedRange;
       //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
@@ -554,18 +580,18 @@ export default class Scatterplot<T> extends EventEmitter {
     const range2transform = (minMax: IMinMax, scale: IScale) => {
       const pmin = scale(minMax[0]);
       const pmax = scale(minMax[1]);
-      const k = (scale.range()[1] - scale.range()[0])/(pmax - pmin);
-      return { k, t : (scale.range()[0] - pmin) };
+      const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
+      return {k, t: (scale.range()[0] - pmin)};
     };
     const s = this.props.zoom.scale;
-    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale): null;
-    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale): null;
+    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
+    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
     let k = 1;
     if (x && y) {
       k = Math.min(x.k, y.k);
     } else if (x) {
       k = x.k;
-    } else if(y) {
+    } else if (y) {
       k = y.k;
     }
     return {
@@ -590,7 +616,7 @@ export default class Scatterplot<T> extends EventEmitter {
    * returns the current visible window
    * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
    */
-  get window() : IWindow {
+  get window(): IWindow {
     const {xscale, yscale} = this.transformedScales();
     return {
       xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
@@ -618,7 +644,7 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private onZoom() {
     const evt = <D3ZoomEvent<any,any>>d3event;
-    const newValue:ZoomTransform = evt.transform;
+    const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
     const scale = this.props.zoom.scale;
@@ -626,9 +652,9 @@ export default class Scatterplot<T> extends EventEmitter {
     const schanged = (oldValue.k !== newValue.k);
     const delta = {
       x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
-      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y: 0,
-      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k: 1,
-      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k: 1
+      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y : 0,
+      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1,
+      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
     };
     if (tchanged && schanged) {
       this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
@@ -681,7 +707,7 @@ export default class Scatterplot<T> extends EventEmitter {
     this.lasso.clear();
   }
 
-  private onClick(event:MouseEvent) {
+  private onClick(event: MouseEvent) {
     if (event.button > 0) {
       //right button or something like that = reset
       this.selection = [];
@@ -694,7 +720,7 @@ export default class Scatterplot<T> extends EventEmitter {
     this.selectWithTester(tester);
   }
 
-  private showTooltip(pos:[number, number]) {
+  private showTooltip(pos: [number, number]) {
     //highlight selected item
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(pos);
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
@@ -703,7 +729,7 @@ export default class Scatterplot<T> extends EventEmitter {
     this.showTooltipHandle = -1;
   }
 
-  private onMouseMove(event:MouseEvent) {
+  private onMouseMove(event: MouseEvent) {
     if (this.showTooltipHandle >= 0) {
       this.onMouseLeave(event);
     }
@@ -712,7 +738,7 @@ export default class Scatterplot<T> extends EventEmitter {
     this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.props.tooltipDelay);
   }
 
-  private onMouseLeave(event:MouseEvent) {
+  private onMouseLeave(event: MouseEvent) {
     clearTimeout(this.showTooltipHandle);
     this.showTooltipHandle = -1;
     this.props.showTooltip(this.parent, [], 0, 0);
@@ -741,15 +767,15 @@ export default class Scatterplot<T> extends EventEmitter {
     }
 
     //transform scale
-    const { xscale, yscale} = this.transformedScales();
+    const {xscale, yscale} = this.transformedScales();
 
-    const { n2pX, n2pY} = this.transformedNormalized2PixelScales();
+    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     const nx = (v) => n2pX.invert(v),
       ny = (v) => n2pY.invert(v);
     //inverted y scale
     const isNodeVisible = hasOverlap(nx(bounds.x0), ny(bounds.y1), nx(bounds.x1), ny(bounds.y0));
 
-    function useAggregation(x0:number, y0:number, x1:number, y1:number) {
+    function useAggregation(x0: number, y0: number, x1: number, y1: number) {
       x0 = n2pX(x0);
       y0 = n2pY(y0);
       x1 = n2pX(x1);
@@ -783,12 +809,12 @@ export default class Scatterplot<T> extends EventEmitter {
       return ctx;
     };
 
-    const renderSelection = !this.isSelectAble() && !this.hasExtras() ? ()=>undefined : () => {
-      const ctx = renderCtx(true);
-      this.lasso.render(ctx);
-    };
+    const renderSelection = !this.isSelectAble() && !this.hasExtras() ? () => undefined : () => {
+        const ctx = renderCtx(true);
+        this.lasso.render(ctx);
+      };
 
-    const transformData = (x:number, y:number, kx:number, ky:number) => {
+    const transformData = (x: number, y: number, kx: number, ky: number) => {
       //idea copy the data layer to selection layer in a transformed way and swap
       const ctx = this.canvasSelectionLayer.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
@@ -857,15 +883,24 @@ export default class Scatterplot<T> extends EventEmitter {
     }
   }
 
-  private renderAxes(xscale:IScale, yscale:IScale) {
+  private renderAxes(xscale: IScale, yscale: IScale) {
     const left = axisLeft(yscale),
       bottom = axisBottom(xscale),
       $parent = select(this.parent);
+    const setFormat = (axis: Axis<number>, key: string) => {
+      const p = this.props.format[key];
+      if (p === null) {
+        return;
+      }
+      axis.tickFormat(typeof p === 'string' ? format(p) : p);
+    };
+    setFormat(left, 'y');
+    setFormat(bottom, 'x');
     $parent.select('svg > g').call(left);
     $parent.select('svg:last-of-type > g').call(bottom);
   }
 
-  private renderTree(ctx:CanvasRenderingContext2D, tree:Quadtree<T>, renderer:ISymbolRenderer<T>, xscale:IScale, yscale:IScale, isNodeVisible:IBoundsPredicate, useAggregation:IBoundsPredicate, debug = false) {
+  private renderTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, useAggregation: IBoundsPredicate, debug = false) {
     const {x, y} = this.props;
 
     //function debugNode(color:string, x0:number, y0:number, x1:number, y1:number) {
@@ -885,7 +920,7 @@ export default class Scatterplot<T> extends EventEmitter {
     //debug stats
     let rendered = 0, aggregated = 0, hidden = 0;
 
-    function visitTree(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0:number, y0:number, x1:number, y1:number) {
+    function visitTree(node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) {
       if (!isNodeVisible(x0, y0, x1, y1)) {
         hidden += debug ? getTreeSize(node) : 0;
         return ABORT_TRAVERSAL;
