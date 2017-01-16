@@ -32,6 +32,12 @@ export enum ERenderMode {
   HOVER
 }
 
+export interface IRenderInfo {
+  /**
+   * current zoomLevel
+   */
+  zoomLevel: number;
+}
 /**
  * factory for creating symbols renderers
  */
@@ -39,9 +45,10 @@ export interface ISymbol<T> {
   /**
    * @param ctx the context to use
    * @param mode the current render mode
+   * @param config additional config information
    * @returns a symbol renderer
    */
-  (ctx: CanvasRenderingContext2D, mode: ERenderMode): ISymbolRenderer<T>;
+  (ctx: CanvasRenderingContext2D, mode: ERenderMode, renderInfo: IRenderInfo): ISymbolRenderer<T>;
 }
 
 export const d3SymbolCircle: SymbolType = symbolCircle;

@@ -758,6 +758,9 @@ export default class Scatterplot<T> extends EventEmitter {
       return minSize < 5; //TODO tune depend on visual impact
     }
 
+    const renderInfo = {
+      zoomLevel: this.currentTransform.k
+    };
 
     const renderCtx = (isSelection = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
@@ -766,7 +769,7 @@ export default class Scatterplot<T> extends EventEmitter {
       ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
       const tree = isSelection ? this.selectionTree : this.tree;
-      const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL);
+      const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
       this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);
 
