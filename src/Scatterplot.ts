@@ -176,7 +176,7 @@ export interface IScatterplotOptions<T> {
    * @param xscale
    * @param yscale
    */
-  extras?(ctx: CanvasRenderingContext2D, xscale: (domain)=>number, yscale: (domain)=>number);
+  extras?(ctx: CanvasRenderingContext2D, xscale: IScale, yscale: IScale);
 }
 
 //normalized range the quadtree is defined
