@@ -4,14 +4,21 @@
     "target": "es5",
     "noImplicitAny": false,
     "sourceMap": true,
+    "jsx": "react",
     "moduleResolution": "node",
-    "lib": ["dom", "es2015"],
+    "lib": [
+      "dom",
+      "es2015"
+    ],
+    "experimentalDecorators": true,
     "declaration": true,
-    "declarationDir": "typings"
-	},
+    "declarationDir": "typings",
+    "baseUrl": "../"
+  },
   "include": [
     "src/**/*.ts",
-    "test/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
     "tsd.d.ts"
   ]
 }
