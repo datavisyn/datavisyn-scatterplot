@@ -308,12 +308,16 @@ export default class Scatterplot<T> extends EventEmitter {
   private zommHandle = -1;
   private dragHandle = -1;
 
-  constructor(data: T[], private parent: HTMLElement, props?: IScatterplotOptions<T>) {
+  private readonly parent: HTMLElement;
+
+  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
 
+    this.parent = root.ownerDocument.createElement('div');
+    root.appendChild(this.parent);
     //init dom
-    parent.innerHTML = `
+    this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
@@ -325,10 +329,10 @@ export default class Scatterplot<T> extends EventEmitter {
       <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
       <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
     `;
-    parent.classList.add(cssprefix);
+    this.parent.classList.add(cssprefix);
 
-    this.canvasDataLayer = <HTMLCanvasElement>parent.children[0];
-    this.canvasSelectionLayer = <HTMLCanvasElement>parent.children[1];
+    this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
+    this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
 
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
