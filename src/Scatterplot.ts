@@ -602,8 +602,11 @@ export default class Scatterplot<T> extends EventEmitter {
       //compute the data domain radius based on xscale and the scaling factor
       const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const viewSizeX = transform.k * range(this.normalized2pixel.x.range());
-      const viewSizeY = transform.k * range(this.normalized2pixel.y.range());
+      const scale = this.props.zoom.scale;
+      const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
+      const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
+      const viewSizeX = kX * range(this.normalized2pixel.x.range());
+      const viewSizeY = kY * range(this.normalized2pixel.y.range());
       //tranform from view to data without translation
       const normalizedRangeX = range(this.normalized2pixel.x.domain());
       const normalizedRangeY = range(this.normalized2pixel.y.domain());
@@ -775,7 +778,6 @@ export default class Scatterplot<T> extends EventEmitter {
       return;
     }
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
-
     //find closest data item
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     this.selectWithTester(tester);
