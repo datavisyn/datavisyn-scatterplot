@@ -14,6 +14,7 @@ import {
   symbolWye,
   SymbolType
 } from 'd3-shape';
+import merge from './merge';
 
 /**
  * a symbol renderer renderes a bunch of data points using `render` at the end `done` will be called
@@ -49,6 +50,13 @@ export interface ISymbol<T> {
    * @returns a symbol renderer
    */
   (ctx: CanvasRenderingContext2D, mode: ERenderMode, renderInfo: IRenderInfo): ISymbolRenderer<T>;
+}
+
+export interface ISymbolOptions {
+  fillColor?: string;
+  hoverColor?: string;
+  selectedColor?: string;
+  symbolSize?: number;
 }
 
 export const d3SymbolCircle: SymbolType = symbolCircle;
@@ -93,14 +101,22 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
  * @param size
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
-export function circleSymbol(fillStyle: string = 'steelblue', size = 20): ISymbol<any> {
-  const r = Math.sqrt(size / Math.PI);
+export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
+  const defaultOptions: ISymbolOptions = {
+    fillColor: 'steelblue',
+    selectedColor: 'red',
+    hoverColor: 'orange',
+    symbolSize: 20
+  };
+  const options = merge(defaultOptions, params || {});
+
+  const r = Math.sqrt(options.symbolSize / Math.PI);
   const tau = 2 * Math.PI;
 
   const styles = {
-    [ERenderMode.NORMAL]: fillStyle,
-    [ERenderMode.HOVER]: 'orange',
-    [ERenderMode.SELECTED]: 'red'
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
   };
 
   return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {

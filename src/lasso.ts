@@ -24,13 +24,20 @@ export interface ILassoOptions {
   lineWidth?: number;
   strokeStyle?: string;
   fillStyle?: string;
+  pointRadius?: number;
+  dashedLine?: {dashLength: number, gapLength: number};
 }
 
 export default class Lasso {
   private props: ILassoOptions = {
-    lineWidth: 5,
+    lineWidth: 3,
     strokeStyle: 'rgba(0,0,0,1)',
-    fillStyle: 'rgba(0,0,0,0.2)'
+    fillStyle: 'rgba(0,0,0,0.2)',
+    pointRadius: 3,
+    dashedLine: {
+      dashLength: 5,
+      gapLength: 3
+    }
   };
   private line = d3line().curve(curveLinearClosed);
   private points: IPoint[] = [];
@@ -92,6 +99,10 @@ export default class Lasso {
     ctx.lineWidth = this.props.lineWidth;
     ctx.strokeStyle = this.props.strokeStyle;
 
+    if(this.props.dashedLine) {
+      ctx.setLineDash([this.props.dashedLine.dashLength, this.props.dashedLine.gapLength]);
+    }
+
     if (p.length > 0) {
       this.line.context(ctx)(p);
       ctx.fillStyle = this.props.fillStyle;
@@ -99,13 +110,14 @@ export default class Lasso {
       ctx.stroke();
     }
 
-    function renderPoint(p: IPoint) {
+
+    const renderPoint = (p: IPoint) => {
       if (!p) {
         return;
       }
       ctx.moveTo(p[0], p[1]);
-      ctx.arc(p[0], p[1], 3, 0, Math.PI * 2);
-    }
+      ctx.arc(p[0], p[1], this.props.pointRadius, 0, Math.PI * 2);
+    };
 
     ctx.beginPath();
     renderPoint(p[0]);
