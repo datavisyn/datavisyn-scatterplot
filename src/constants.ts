@@ -9,5 +9,5 @@
  * @type {string}
  */
 export const cssprefix = 'datavisyn-scatterplot';
-export const DEBUG = true;
+export const DEBUG = false;
 export const debuglog = DEBUG ? console.log: ()=>undefined;

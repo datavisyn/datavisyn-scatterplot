@@ -5,6 +5,7 @@
  */
 
 import {axisLeft, axisBottom, AxisScale, Axis} from 'd3-axis';
+import {extent} from 'd3-array';
 import {format} from 'd3-format';
 import {scaleLinear} from 'd3-scale';
 import {select, mouse, event as d3event} from 'd3-selection';
@@ -145,10 +146,20 @@ export interface IScatterplotOptions<T> {
   xscale?: IScale;
 
   /**
+   * instead of specifying the scale just the x limits
+   */
+  xlim?: [number, number];
+
+  /**
    * d3 y scale
    * default: linear scale with a domain from 0...100
    */
   yscale?: IScale;
+
+  /**
+   * instead of specifying the scale just the y limits
+   */
+  ylim?: [number, number];
 
   /**
    * symbol used to render an data point
@@ -203,10 +214,15 @@ export interface IScatterplotOptions<T> {
    * @param yscale
    */
   extras?(ctx: CanvasRenderingContext2D, xscale: IScale, yscale: IScale);
+
+  /**
+   * optional hint for the scatterplot in which aspect ratio it will be rendered. This is useful for improving the selection and interaction in non 1:1 aspect ratios
+   */
+  aspectRatio?: number;
 }
 
 //normalized range the quadtree is defined
-const NORMALIZED_RANGE = [0, 100];
+const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
 /**
  * reasons why a new render pass is needed
@@ -233,6 +249,15 @@ export interface IWindow {
   yMinMax: IMinMax;
 }
 
+function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
+  if (given) {
+    return given;
+  }
+  if (givenLimits) {
+    return current.domain(givenLimits);
+  }
+  return current.domain(extent(data, acc));
+}
 
 /**
  * a class for rendering a scatterplot in a canvas
@@ -260,8 +285,7 @@ export default class Scatterplot<T> extends EventEmitter {
       translateBy: [0, 0],
     },
 
-    format: {
-    },
+    format: {},
 
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
@@ -284,13 +308,15 @@ export default class Scatterplot<T> extends EventEmitter {
       interval: 100
     },
 
-    extras: null
+    extras: null,
+
+    aspectRatio: 1
   };
 
 
   private readonly normalized2pixel = {
-    x: scaleLinear().domain(NORMALIZED_RANGE),
-    y: scaleLinear().domain(NORMALIZED_RANGE)
+    x: scaleLinear(),
+    y: scaleLinear()
   };
   private canvasDataLayer: HTMLCanvasElement;
   private canvasSelectionLayer: HTMLCanvasElement;
@@ -316,6 +342,15 @@ export default class Scatterplot<T> extends EventEmitter {
   constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
+    this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
+    this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
+
+    // generate aspect ratio right normalized domain
+    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
+    this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
+
+    this.setDataImpl(data);
+    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.parent = root.ownerDocument.createElement('div');
     root.appendChild(this.parent);
@@ -324,10 +359,10 @@ export default class Scatterplot<T> extends EventEmitter {
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
-        <g transform="translate(${this.props.margin.left},0)"><g>
+        <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
       </svg>
       <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
-        <g><g>
+        <g transform="translate(${this.props.margin.left},0)"><g>
       </svg>
       <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
       <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
@@ -348,7 +383,7 @@ export default class Scatterplot<T> extends EventEmitter {
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(zoom.scaleExtent)
-        //.translateExtent([[0,0],[10000,10000]])
+        .translateExtent([[0,0], [+Infinity, +Infinity]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(this.zoomBehavior)
@@ -374,9 +409,6 @@ export default class Scatterplot<T> extends EventEmitter {
       $parent.on('mouseleave', () => this.onMouseLeave(d3event))
         .on('mousemove', () => this.onMouseMove(d3event));
     }
-
-    this.setDataImpl(data);
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
   }
 
   get data() {
@@ -385,9 +417,11 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private setDataImpl(data: T[]) {
     //generate a quad tree out of the data
-    //work on a normalized dimension to avoid hazzling
-    const domain2normalizedX = this.props.xscale.copy().range(NORMALIZED_RANGE);
-    const domain2normalizedY = this.props.yscale.copy().range(NORMALIZED_RANGE);
+    //work on a normalized dimension within the quadtree to
+    // * be independent of the current pixel size
+    // * but still consider the mapping function (linear, pow, log) from the data domain
+    const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
+    const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
     this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
   }
 
@@ -511,9 +545,22 @@ export default class Scatterplot<T> extends EventEmitter {
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
       this.canvasSelectionLayer.width = c.width = c.clientWidth;
       this.canvasSelectionLayer.height = c.height = c.clientHeight;
+      this.adaptMaxTranslation();
       return true;
     }
     return false;
+  }
+
+  private adaptMaxTranslation() {
+    if (!this.zoomBehavior) {
+      return;
+    }
+
+    const availableWidth = this.canvasDataLayer.width - this.props.margin.left - this.props.margin.right;
+    const availableHeight = this.canvasDataLayer.height - this.props.margin.top - this.props.margin.bottom;
+    this.zoomBehavior
+      .extent([[0, 0], [availableWidth, availableHeight]])
+      .translateExtent([[0, 0], [availableWidth, availableHeight]]);
   }
 
   resized() {
@@ -538,11 +585,16 @@ export default class Scatterplot<T> extends EventEmitter {
     return {xscale, yscale};
   }
 
-  private getMouseNormalizedPos(pixelpos = mouse(this.parent)) {
+  private mousePosAtCanvas() {
+    const pos = mouse(this.parent);
+    // shift by the margin since the scales doesn't include them for better scaling experience
+    return [pos[0] - this.props.margin.left, pos[1] - this.props.margin.top];
+  }
+
+  private getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
-    function rangeRange(s: IScale) {
-      const range = s.range();
+    function range(range: number[]) {
       return Math.abs(range[1] - range[0]);
     }
 
@@ -550,19 +602,23 @@ export default class Scatterplot<T> extends EventEmitter {
       //compute the data domain radius based on xscale and the scaling factor
       const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const viewSizeX = transform.k * rangeRange(this.normalized2pixel.x);
-      const viewSizeY = transform.k * rangeRange(this.normalized2pixel.y);
+      const scale = this.props.zoom.scale;
+      const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
+      const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
+      const viewSizeX = kX * range(this.normalized2pixel.x.range());
+      const viewSizeY = kY * range(this.normalized2pixel.y.range());
       //tranform from view to data without translation
-      const normalizedRange = (NORMALIZED_RANGE[1] - NORMALIZED_RANGE[0]);
-      const normalizedX = view / viewSizeX * normalizedRange;
-      const normalizedY = view / viewSizeY * normalizedRange;
+      const normalizedRangeX = range(this.normalized2pixel.x.domain());
+      const normalizedRangeY = range(this.normalized2pixel.y.domain());
+      const normalizedX = view / viewSizeX * normalizedRangeX;
+      const normalizedY = view / viewSizeY * normalizedRangeY;
       //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
       //debuglog(view, viewSize, transform.k, normalizedSize, normalized);
       return [normalizedX, normalizedY];
     };
 
     const [clickRadiusX, clickRadiusY] = computeClickRadius();
-    return {x: n2pX.invert(pixelpos[0]), y: n2pY.invert(pixelpos[1]), clickRadiusX, clickRadiusY};
+    return {x: n2pX.invert(canvasPixelPox[0]), y: n2pY.invert(canvasPixelPox[1]), clickRadiusX, clickRadiusY};
   }
 
   private transformedNormalized2PixelScales() {
@@ -699,7 +755,8 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private retestLasso() {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
-    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY));
+    // shift by the margin since the scales doesn't include them for better scaling experience
+    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.margin.left, -this.props.margin.top);
     return tester && this.selectWithTester(tester);
   }
 
@@ -721,18 +778,18 @@ export default class Scatterplot<T> extends EventEmitter {
       return;
     }
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
-
     //find closest data item
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     this.selectWithTester(tester);
   }
 
-  private showTooltip(pos: [number, number]) {
+  private showTooltip(canvasPos: [number, number]) {
     //highlight selected item
-    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(pos);
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     const items = findByTester(this.tree, tester);
-    this.props.showTooltip(this.parent, items, pos[0], pos[1]);
+    // canvas pos doesn't include the margin
+    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top);
     this.showTooltipHandle = -1;
   }
 
@@ -740,7 +797,7 @@ export default class Scatterplot<T> extends EventEmitter {
     if (this.showTooltipHandle >= 0) {
       this.onMouseLeave(event);
     }
-    const pos = mouse(this.parent);
+    const pos = this.mousePosAtCanvas();
     //TODO find a more efficient way or optimize the timing
     this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.props.tooltipDelay);
   }
@@ -767,8 +824,8 @@ export default class Scatterplot<T> extends EventEmitter {
     this.emit(Scatterplot.EVENT_RENDER, ERenderReason[reason], transformDelta);
 
     if (reason === ERenderReason.DIRTY) {
-      this.props.xscale.range([bounds.x0, bounds.x1]);
-      this.props.yscale.range([bounds.y1, bounds.y0]);
+      this.props.xscale.range([0, boundsWidth]);
+      this.props.yscale.range([boundsHeight, 0]);
       this.normalized2pixel.x.range(this.props.xscale.range());
       this.normalized2pixel.y.range(this.props.yscale.range());
     }
@@ -780,7 +837,7 @@ export default class Scatterplot<T> extends EventEmitter {
     const nx = (v) => n2pX.invert(v),
       ny = (v) => n2pY.invert(v);
     //inverted y scale
-    const isNodeVisible = hasOverlap(nx(bounds.x0), ny(bounds.y1), nx(bounds.x1), ny(bounds.y0));
+    const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
 
     function useAggregation(x0: number, y0: number, x1: number, y1: number) {
       x0 = n2pX(x0);
@@ -804,6 +861,7 @@ export default class Scatterplot<T> extends EventEmitter {
       const tree = isSelection ? this.selectionTree : this.tree;
       const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
+      ctx.translate(bounds.x0, bounds.y0);
       this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);
 
       if (isSelection && this.hasExtras()) {
