@@ -101,13 +101,15 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
  * @param size
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
-export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const defaultOptions: ISymbolOptions = {
+
+const defaultOptions: ISymbolOptions = {
     fillColor: 'steelblue',
     selectedColor: 'red',
     hoverColor: 'orange',
     symbolSize: 20
   };
+
+export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
   const options = merge(defaultOptions, params || {});
 
   const r = Math.sqrt(options.symbolSize / Math.PI);
@@ -129,6 +131,32 @@ export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
         ctx.arc(x, y, r, 0, tau);
       },
       //after
+      done: () => {
+        ctx.closePath();
+        ctx.fillStyle = styles[mode];
+        ctx.fill();
+      }
+    };
+  };
+}
+
+export function squareSymbol(params?: ISymbolOptions) {
+  const options = merge(defaultOptions, params || {});
+
+  const length = Math.sqrt(options.symbolSize);
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  return(ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    ctx.beginPath();
+    return {
+      render: (x: number, y: number) => {
+        ctx.rect(x - length / 2, y - length / 2, length, length);
+      },
       done: () => {
         ctx.closePath();
         ctx.fillStyle = styles[mode];

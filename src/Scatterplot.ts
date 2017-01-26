@@ -11,7 +11,7 @@ import {select, mouse, event as d3event} from 'd3-selection';
 import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
 import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
-import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
+import {circleSymbol, squareSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
 import merge from './merge';
 import {
   forEachLeaf,
