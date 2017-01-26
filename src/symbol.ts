@@ -103,11 +103,11 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
  */
 
 const defaultOptions: ISymbolOptions = {
-    fillColor: 'steelblue',
-    selectedColor: 'red',
-    hoverColor: 'orange',
-    symbolSize: 20
-  };
+  fillColor: 'steelblue',
+  selectedColor: 'red',
+  hoverColor: 'orange',
+  symbolSize: 20
+};
 
 export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
   const options = merge(defaultOptions, params || {});
@@ -151,7 +151,7 @@ export function squareSymbol(params?: ISymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
-  return(ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
     ctx.beginPath();
     return {
       render: (x: number, y: number) => {
@@ -169,7 +169,7 @@ export function squareSymbol(params?: ISymbolOptions) {
 export function diamondSymbol(params?: ISymbolOptions) {
   const options = merge(defaultOptions, params || {});
 
-  const tan30 = Math.sqrt(1/3);
+  const tan30 = Math.sqrt(1 / 3);
   const tan30Double = tan30 * 2;
   const moveYAxis = Math.sqrt(options.symbolSize / tan30Double);
   const moveXAxis = moveYAxis * tan30;
@@ -180,7 +180,7 @@ export function diamondSymbol(params?: ISymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
-  return(ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
     ctx.beginPath();
     return {
       render: (x: number, y: number) => {
