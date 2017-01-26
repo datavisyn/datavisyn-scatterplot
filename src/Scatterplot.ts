@@ -335,8 +335,11 @@ export default class Scatterplot<T> extends EventEmitter {
   constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
-    this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props.xscale, props.xlim);
-    this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props.yscale, props.ylim);
+    this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale: null, props ? props.xlim: null);
+    this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale: null, props ? props.ylim: null);
+
+    this.setDataImpl(data);
+    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.parent = root.ownerDocument.createElement('div');
     root.appendChild(this.parent);
@@ -369,7 +372,7 @@ export default class Scatterplot<T> extends EventEmitter {
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(zoom.scaleExtent)
-        //.translateExtent([[0,0],[10000,10000]])
+        .translateExtent([[0,0],[+Infinity,+Infinity]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(this.zoomBehavior)
@@ -395,9 +398,6 @@ export default class Scatterplot<T> extends EventEmitter {
       $parent.on('mouseleave', () => this.onMouseLeave(d3event))
         .on('mousemove', () => this.onMouseMove(d3event));
     }
-
-    this.setDataImpl(data);
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
   }
 
   get data() {
