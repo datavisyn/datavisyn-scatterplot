@@ -532,13 +532,22 @@ export default class Scatterplot<T> extends EventEmitter {
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
       this.canvasSelectionLayer.width = c.width = c.clientWidth;
       this.canvasSelectionLayer.height = c.height = c.clientHeight;
-      if (this.zoomBehavior) {
-        const {left, top, bottom, right} = this.props.margin;
-        this.zoomBehavior.translateExtent([[0, 0], [+Infinity, +Infinity]]);
-      }
+      this.adaptMaxTranslation();
       return true;
     }
     return false;
+  }
+
+  private adaptMaxTranslation() {
+    if (!this.zoomBehavior) {
+      return;
+    }
+
+    const availableWidth = this.canvasDataLayer.width - this.props.margin.left - this.props.margin.right;
+    const availableHeight = this.canvasDataLayer.height - this.props.margin.top - this.props.margin.bottom;
+    this.zoomBehavior
+      .extent([[0, 0], [availableWidth, availableHeight]])
+      .translateExtent([[0, 0], [availableWidth, availableHeight]]);
   }
 
   resized() {
@@ -806,6 +815,7 @@ export default class Scatterplot<T> extends EventEmitter {
       this.normalized2pixel.x.range(this.props.xscale.range());
       this.normalized2pixel.y.range(this.props.yscale.range());
     }
+    console.log(this.props.yscale.range());
 
     //transform scale
     const {xscale, yscale} = this.transformedScales();
