@@ -140,7 +140,7 @@ export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
   };
 }
 
-export function squareSymbol(params?: ISymbolOptions) {
+export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
   const options = merge(defaultOptions, params || {});
 
   const length = Math.sqrt(options.symbolSize);
@@ -166,7 +166,7 @@ export function squareSymbol(params?: ISymbolOptions) {
   };
 }
 
-export function diamondSymbol(params?: ISymbolOptions) {
+export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
   const options = merge(defaultOptions, params || {});
 
   const tan30 = Math.sqrt(1 / 3);
