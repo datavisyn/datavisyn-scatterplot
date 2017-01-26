@@ -214,10 +214,15 @@ export interface IScatterplotOptions<T> {
    * @param yscale
    */
   extras?(ctx: CanvasRenderingContext2D, xscale: IScale, yscale: IScale);
+
+  /**
+   * optional hint for the scatterplot in which aspect ratio it will be rendered. This is useful for improving the selection and interaction in non 1:1 aspect ratios
+   */
+  aspectRatio?: number;
 }
 
 //normalized range the quadtree is defined
-const NORMALIZED_RANGE = [0, 100];
+const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
 /**
  * reasons why a new render pass is needed
@@ -303,13 +308,15 @@ export default class Scatterplot<T> extends EventEmitter {
       interval: 100
     },
 
-    extras: null
+    extras: null,
+
+    aspectRatio: 1
   };
 
 
   private readonly normalized2pixel = {
-    x: scaleLinear().domain(NORMALIZED_RANGE),
-    y: scaleLinear().domain(NORMALIZED_RANGE)
+    x: scaleLinear(),
+    y: scaleLinear()
   };
   private canvasDataLayer: HTMLCanvasElement;
   private canvasSelectionLayer: HTMLCanvasElement;
@@ -337,6 +344,10 @@ export default class Scatterplot<T> extends EventEmitter {
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
+
+    // generate aspect ratio right normalized domain
+    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
+    this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
 
     this.setDataImpl(data);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
@@ -406,9 +417,11 @@ export default class Scatterplot<T> extends EventEmitter {
 
   private setDataImpl(data: T[]) {
     //generate a quad tree out of the data
-    //work on a normalized dimension to avoid hazzling
-    const domain2normalizedX = this.props.xscale.copy().range(NORMALIZED_RANGE);
-    const domain2normalizedY = this.props.yscale.copy().range(NORMALIZED_RANGE);
+    //work on a normalized dimension within the quadtree to
+    // * be independent of the current pixel size
+    // * but still consider the mapping function (linear, pow, log) from the data domain
+    const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
+    const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
     this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
   }
 
@@ -581,8 +594,7 @@ export default class Scatterplot<T> extends EventEmitter {
   private getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
-    function rangeRange(s: IScale) {
-      const range = s.range();
+    function range(range: number[]) {
       return Math.abs(range[1] - range[0]);
     }
 
@@ -590,12 +602,13 @@ export default class Scatterplot<T> extends EventEmitter {
       //compute the data domain radius based on xscale and the scaling factor
       const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const viewSizeX = transform.k * rangeRange(this.normalized2pixel.x);
-      const viewSizeY = transform.k * rangeRange(this.normalized2pixel.y);
+      const viewSizeX = transform.k * range(this.normalized2pixel.x.range());
+      const viewSizeY = transform.k * range(this.normalized2pixel.y.range());
       //tranform from view to data without translation
-      const normalizedRange = (NORMALIZED_RANGE[1] - NORMALIZED_RANGE[0]);
-      const normalizedX = view / viewSizeX * normalizedRange;
-      const normalizedY = view / viewSizeY * normalizedRange;
+      const normalizedRangeX = range(this.normalized2pixel.x.domain());
+      const normalizedRangeY = range(this.normalized2pixel.y.domain());
+      const normalizedX = view / viewSizeX * normalizedRangeX;
+      const normalizedY = view / viewSizeY * normalizedRangeY;
       //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
       //debuglog(view, viewSize, transform.k, normalizedSize, normalized);
       return [normalizedX, normalizedY];
