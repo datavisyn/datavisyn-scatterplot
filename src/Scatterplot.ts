@@ -260,6 +260,9 @@ export default class Scatterplot<T> extends EventEmitter {
       translateBy: [0, 0],
     },
 
+    format: {
+    },
+
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -887,13 +890,13 @@ export default class Scatterplot<T> extends EventEmitter {
     }
   }
 
-  private renderAxes(xscale: IScale, yscale: IScale) {
+  protected renderAxes(xscale: IScale, yscale: IScale) {
     const left = axisLeft(yscale),
       bottom = axisBottom(xscale),
       $parent = select(this.parent);
     const setFormat = (axis: Axis<number>, key: string) => {
       const p = this.props.format[key];
-      if (p === null) {
+      if (p == null) {
         return;
       }
       axis.tickFormat(typeof p === 'string' ? format(p) : p);

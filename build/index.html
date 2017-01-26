@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Scatterplot Test</title>
-
+    <style>
+        .datavisyn-scatterplot {
+            width: 520px;
+            height: 500px
+        }
+    </style>
 </head>
 <body>
 <h1>
@@ -13,7 +18,7 @@
     <input type="number" step="1000" value="10000">
   </label>
 <section>
-<div style="width: 520px; height: 500px"></div>
+<div id="root"></div>
 <div id="minimap" style="width: 250px; height: 250px"></div>
 </section>
 <section>
@@ -38,7 +43,7 @@
         data.push({x: Math.random()*100, y: Math.random()*100});
       }
       console.timeEnd('gen');
-      var div = document.querySelector('div');
+      var div = document.querySelector('#root');
       div.innerHTML = ''; //clear existing stuff
 
       var s = new datavisyn.scatterplot.Scatterplot(data, div);
