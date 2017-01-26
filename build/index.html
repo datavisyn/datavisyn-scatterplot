@@ -46,7 +46,7 @@
       var div = document.querySelector('#root');
       div.innerHTML = ''; //clear existing stuff
 
-      var s = new datavisyn.scatterplot.Scatterplot(data, div);
+      var s = new datavisyn.scatterplot.Scatterplot(data, div, { xlim: [0,100], ylim: [0,100]});
       //hack render to have information
       var bak = s.render.bind(s);
       s.render = function() {

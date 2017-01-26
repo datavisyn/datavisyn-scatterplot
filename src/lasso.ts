@@ -72,11 +72,11 @@ export default class Lasso {
     this.current = null;
   }
 
-  tester(p2nX: (p: number)=>number, p2nY: (p: number)=>number): ITester {
+  tester(p2nX: (p: number)=>number, p2nY: (p: number)=>number, shiftX: number = 0, shiftY: number = 0): ITester {
     if (this.points.length < 3) {
       return null;
     }
-    const polygon = polygonHull(this.points.map(([x,y]) => <[number, number]>[p2nX(x), p2nY(y)]));
+    const polygon = polygonHull(this.points.map(([x,y]) => <[number, number]>[p2nX(x + shiftX), p2nY(y + shiftY)]));
     const [x0, x1] = extent(polygon, (d) => d[0]);
     const [y0, y1] = extent(polygon, (d) => d[1]);
     return {
