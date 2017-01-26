@@ -707,7 +707,6 @@ export default class Scatterplot<T> extends EventEmitter {
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
-    console.log(newValue.x, newValue.y, newValue.k);
     const scale = this.props.zoom.scale;
     const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
     const schanged = (oldValue.k !== newValue.k);
@@ -828,7 +827,6 @@ export default class Scatterplot<T> extends EventEmitter {
       this.normalized2pixel.x.range(this.props.xscale.range());
       this.normalized2pixel.y.range(this.props.yscale.range());
     }
-    console.log(this.props.yscale.range());
 
     //transform scale
     const {xscale, yscale} = this.transformedScales();
