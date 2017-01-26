@@ -165,3 +165,36 @@ export function squareSymbol(params?: ISymbolOptions) {
     };
   };
 }
+
+export function diamondSymbol(params?: ISymbolOptions) {
+  const options = merge(defaultOptions, params || {});
+
+  const tan30 = Math.sqrt(1/3);
+  const tan30Double = tan30 * 2;
+  const moveYAxis = Math.sqrt(options.symbolSize / tan30Double);
+  const moveXAxis = moveYAxis * tan30;
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  return(ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    ctx.beginPath();
+    return {
+      render: (x: number, y: number) => {
+        ctx.moveTo(x, y - moveYAxis);
+        ctx.lineTo(x - moveXAxis, y);
+        ctx.lineTo(x, y + moveYAxis);
+        ctx.lineTo(x + moveXAxis, y);
+        ctx.closePath();
+      },
+      done: () => {
+        ctx.closePath();
+        ctx.fillStyle = styles[mode];
+        ctx.fill();
+      }
+    };
+  };
+}
