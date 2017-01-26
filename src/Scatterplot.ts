@@ -5,6 +5,7 @@
  */
 
 import {axisLeft, axisBottom, AxisScale, Axis} from 'd3-axis';
+import {extent} from 'd3-array';
 import {format} from 'd3-format';
 import {scaleLinear} from 'd3-scale';
 import {select, mouse, event as d3event} from 'd3-selection';
@@ -145,10 +146,20 @@ export interface IScatterplotOptions<T> {
   xscale?: IScale;
 
   /**
+   * instead of specifying the scale just the x limits
+   */
+  xlim?: [number, number];
+
+  /**
    * d3 y scale
    * default: linear scale with a domain from 0...100
    */
   yscale?: IScale;
+
+  /**
+   * instead of specifying the scale just the y limits
+   */
+  ylim?: [number, number];
 
   /**
    * symbol used to render an data point
@@ -233,6 +244,15 @@ export interface IWindow {
   yMinMax: IMinMax;
 }
 
+function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
+  if (given) {
+    return given;
+  }
+  if (givenLimits) {
+    return current.domain(givenLimits);
+  }
+  return current.domain(extent(data, acc));
+}
 
 /**
  * a class for rendering a scatterplot in a canvas
@@ -260,8 +280,7 @@ export default class Scatterplot<T> extends EventEmitter {
       translateBy: [0, 0],
     },
 
-    format: {
-    },
+    format: {},
 
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
@@ -316,6 +335,8 @@ export default class Scatterplot<T> extends EventEmitter {
   constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
+    this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props.xscale, props.xlim);
+    this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props.yscale, props.ylim);
 
     this.parent = root.ownerDocument.createElement('div');
     root.appendChild(this.parent);
