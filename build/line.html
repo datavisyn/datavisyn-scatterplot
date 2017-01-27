@@ -42,7 +42,7 @@
       console.time('gen');
       for (var i = 0; i < count; ++i) {
         //data.push({x: 100*i/count, y: 100*(count-i)/count});
-        data.push({x: Math.floor(i*100/(count-1)), y: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
+        data.push({x: i*100/(count-1), y: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
       }
       console.timeEnd('gen');
       var div = document.querySelector('#root');
