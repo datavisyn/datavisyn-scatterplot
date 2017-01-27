@@ -52,12 +52,17 @@ export interface ISymbol<T> {
   (ctx: CanvasRenderingContext2D, mode: ERenderMode, renderInfo: IRenderInfo): ISymbolRenderer<T>;
 }
 
-export interface ISymbolOptions {
+export interface IStyleSymbolOptions {
   fillColor?: string;
   hoverColor?: string;
   selectedColor?: string;
+}
+
+export interface ISymbolOptions extends IStyleSymbolOptions {
   symbolSize?: number;
 }
+
+
 
 export const d3SymbolCircle: SymbolType = symbolCircle;
 export const d3SymbolCross: SymbolType = symbolCross;
@@ -95,19 +100,23 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
   };
 }
 
+
+const defaultStyleOptions: IStyleSymbolOptions = {
+  fillColor: 'steelblue',
+  selectedColor: 'red',
+  hoverColor: 'orange'
+};
+
+const defaultOptions: ISymbolOptions = merge({
+  symbolSize: 20
+}, defaultStyleOptions);
+
 /**
  * circle symbol renderer (way faster than d3Symbol(d3symbolCircle)
  * @param fillStyle
  * @param size
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
-
-const defaultOptions: ISymbolOptions = {
-  fillColor: 'steelblue',
-  selectedColor: 'red',
-  hoverColor: 'orange',
-  symbolSize: 20
-};
 
 export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
   const options: ISymbolOptions = merge({}, defaultOptions, params || {});
@@ -199,8 +208,16 @@ export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
   };
 }
 
-export function lineRenderer(params?: ISymbolOptions) {
-  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+export interface ILineSymbolOptions extends IStyleSymbolOptions {
+  lineWidth?: number;
+}
+
+const defaultLineOptions = merge({
+  lineWidth: 1
+}, defaultStyleOptions);
+
+export function lineRenderer(params?: ILineSymbolOptions) {
+  const options: ILineSymbolOptions = merge({}, defaultLineOptions, params || {});
 
   const styles = {
     [ERenderMode.NORMAL]: options.fillColor,
@@ -208,7 +225,7 @@ export function lineRenderer(params?: ISymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
-  const data = [];
+  const data: {x: number, y: number}[] = [];
 
   return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
     ctx.beginPath();
@@ -217,15 +234,38 @@ export function lineRenderer(params?: ISymbolOptions) {
         data.push({x, y});
       },
       done: () => {
-        data.sort((a: {x: number}, b: {x: number}) => {
-          return a.x - b.x;
+        data.sort((a, b) => a.x - b.x);
+        data.forEach((d, i) => {
+          if (i === 0) {
+            ctx.moveTo(d.x, d.y);
+          } else {
+            ctx.lineTo(d.x, d.y);
+          }
         });
-        data.forEach((d) => {
-          ctx.lineTo(d.x, d.y);
-        });
-        ctx.fillStyle = styles[mode];
+        ctx.strokeStyle = styles[mode];
         ctx.stroke();
       }
     };
   };
+}
+
+/**
+ * creates an parses a renderer
+ * @param symbol
+ * @returns {any}
+ */
+export function createRenderer<T>(symbol: ISymbol<T>|string): ISymbol<T> {
+  if (typeof symbol === 'string') {
+    switch(<string>symbol.charAt(0)) {
+      case '.':
+        return squareSymbol();
+      case 'b':
+        return diamondSymbol();
+      case 'l':
+        return lineRenderer();
+      default:
+        return circleSymbol();
+    }
+  }
+  return <ISymbol<T>>symbol;
 }
