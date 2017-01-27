@@ -14,6 +14,7 @@ import {
   symbolWye,
   SymbolType
 } from 'd3-shape';
+import {bisector as d3bisector} from 'd3-array'
 import merge from './merge';
 
 /**
@@ -216,6 +217,9 @@ const defaultLineOptions = merge({
   lineWidth: 1
 }, defaultStyleOptions);
 
+
+interface ICoordinatesObject {x: number; y: number;}
+
 export function lineRenderer(params?: ILineSymbolOptions) {
   const options: ILineSymbolOptions = merge({}, defaultLineOptions, params || {});
 
@@ -225,19 +229,20 @@ export function lineRenderer(params?: ILineSymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
+  const coordinateBisector = d3bisector((d: ICoordinatesObject) => { return d.x; }).right;
 
   return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
-    const data: {x: number, y: number}[] = [];
+    const data: ICoordinatesObject[] = [];
     return {
       render: (x: number, y: number) => {
-        data.push({x, y});
+        const index = coordinateBisector(data, x);
+        data.splice(index, 0, {x, y});
       },
       done: () => {
         if (data.length === 0) {
           return;
         }
         ctx.beginPath();
-        data.sort((a, b) => a.x - b.x);
         data.forEach((d, i) => {
           if (i === 0) {
             ctx.moveTo(d.x, d.y);
