@@ -225,15 +225,18 @@ export function lineRenderer(params?: ILineSymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
-  const data: {x: number, y: number}[] = [];
 
   return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
-    ctx.beginPath();
+    const data: {x: number, y: number}[] = [];
     return {
       render: (x: number, y: number) => {
         data.push({x, y});
       },
       done: () => {
+        if (data.length === 0) {
+          return;
+        }
+        ctx.beginPath();
         data.sort((a, b) => a.x - b.x);
         data.forEach((d, i) => {
           if (i === 0) {
