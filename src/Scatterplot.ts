@@ -12,7 +12,7 @@ import {select, mouse, event as d3event} from 'd3-selection';
 import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
 import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
-import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode} from './symbol';
+import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
 import merge from './merge';
 import {
   forEachLeaf,
@@ -165,7 +165,7 @@ export interface IScatterplotOptions<T> {
    * symbol used to render an data point
    * default: steelblue circle
    */
-    symbol?: ISymbol<T>;
+    symbol?: ISymbol<T>|string;
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -330,6 +330,7 @@ export default class Scatterplot<T> extends EventEmitter {
   private showTooltipHandle = -1;
 
   private readonly lasso = new Lasso();
+  private readonly renderer: ISymbol<T>;
 
   private currentTransform: ZoomTransform = zoomIdentity;
   private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
@@ -344,6 +345,8 @@ export default class Scatterplot<T> extends EventEmitter {
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
+
+    this.renderer = createRenderer(this.props.symbol);
 
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
@@ -859,7 +862,7 @@ export default class Scatterplot<T> extends EventEmitter {
       ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
       const tree = isSelection ? this.selectionTree : this.tree;
-      const renderer = this.props.symbol(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
+      const renderer = this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
       this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);

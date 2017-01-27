@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scatterplot Test</title>
+    <style>
+        .datavisyn-scatterplot {
+            width: 520px;
+            height: 500px
+        }
+    </style>
+</head>
+<body>
+<h1>
+  Scatterplot test
+</h1>
+<label>Number of Points:
+    <input type="number" step="100" value="100">
+  </label>
+<section>
+<div id="root"></div>
+</section>
+<section>
+<pre>
+  Notes:
+   * drag/zoom as usual
+   * tooltip after a while
+   * lasso selection using ctrl/alt key
+   * single selection should work
+   * debug output with rendering information
+   * build with Typescript + Webpack2
+</pre>
+</section>
+<script src="scatterplot.js"></script>
+<script>
+  (function () {
+      function clamp(v, min, max) {
+          return Math.min(max, Math.max(v, min));
+      }
+    function rebuild(count) {
+      var data = [];
+      console.time('gen');
+      for (var i = 0; i < count; ++i) {
+        //data.push({x: 100*i/count, y: 100*(count-i)/count});
+        data.push({x: i*100/(count-1), y: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
+      }
+      console.timeEnd('gen');
+      var div = document.querySelector('#root');
+      div.innerHTML = ''; //clear existing stuff
+
+      var s = new datavisyn.scatterplot.Scatterplot(data, div, {
+          xlim: [0,100],
+          ylim: [0,100],
+          zoom: { scale: datavisyn.scatterplot.EScaleAxes.x},
+          symbol: 'l'
+      });
+      //hack render to have information
+      var bak = s.render.bind(s);
+      s.render = function() {
+        console.time('render');
+        bak.apply(s, [].slice.call(arguments));
+        console.timeEnd('render');
+      };
+
+      s.render();
+    }
+
+    document.querySelector('input').onchange = function() {
+      rebuild(+this.value);
+    };
+    rebuild(20);
+  })();
+
+  //React.render(
+  //  <MyComponent>Body</MyComponent>,
+  //  body
+//);
+</script>
+</body>
+</html>

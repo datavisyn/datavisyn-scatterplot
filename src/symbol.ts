@@ -14,6 +14,7 @@ import {
   symbolWye,
   SymbolType
 } from 'd3-shape';
+import {bisector as d3bisector} from 'd3-array';
 import merge from './merge';
 
 /**
@@ -52,12 +53,17 @@ export interface ISymbol<T> {
   (ctx: CanvasRenderingContext2D, mode: ERenderMode, renderInfo: IRenderInfo): ISymbolRenderer<T>;
 }
 
-export interface ISymbolOptions {
+export interface IStyleSymbolOptions {
   fillColor?: string;
   hoverColor?: string;
   selectedColor?: string;
+}
+
+export interface ISymbolOptions extends IStyleSymbolOptions {
   symbolSize?: number;
 }
+
+
 
 export const d3SymbolCircle: SymbolType = symbolCircle;
 export const d3SymbolCross: SymbolType = symbolCross;
@@ -95,20 +101,26 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
   };
 }
 
+
+const defaultStyleOptions: IStyleSymbolOptions = {
+  fillColor: 'steelblue',
+  selectedColor: 'red',
+  hoverColor: 'orange'
+};
+
+const defaultOptions: ISymbolOptions = merge({
+  symbolSize: 20
+}, defaultStyleOptions);
+
 /**
  * circle symbol renderer (way faster than d3Symbol(d3symbolCircle)
  * @param fillStyle
  * @param size
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
+
 export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const defaultOptions: ISymbolOptions = {
-    fillColor: 'steelblue',
-    selectedColor: 'red',
-    hoverColor: 'orange',
-    symbolSize: 20
-  };
-  const options = merge(defaultOptions, params || {});
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
 
   const r = Math.sqrt(options.symbolSize / Math.PI);
   const tau = 2 * Math.PI;
@@ -136,4 +148,132 @@ export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
       }
     };
   };
+}
+
+export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+
+  const length = Math.sqrt(options.symbolSize);
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    ctx.beginPath();
+    return {
+      render: (x: number, y: number) => {
+        ctx.rect(x - length / 2, y - length / 2, length, length);
+      },
+      done: () => {
+        ctx.closePath();
+        ctx.fillStyle = styles[mode];
+        ctx.fill();
+      }
+    };
+  };
+}
+
+export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+
+  const tan30 = Math.sqrt(1 / 3);
+  const tan30Double = tan30 * 2;
+  const moveYAxis = Math.sqrt(options.symbolSize / tan30Double);
+  const moveXAxis = moveYAxis * tan30;
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    ctx.beginPath();
+    return {
+      render: (x: number, y: number) => {
+        ctx.moveTo(x, y - moveYAxis);
+        ctx.lineTo(x - moveXAxis, y);
+        ctx.lineTo(x, y + moveYAxis);
+        ctx.lineTo(x + moveXAxis, y);
+        ctx.closePath();
+      },
+      done: () => {
+        ctx.closePath();
+        ctx.fillStyle = styles[mode];
+        ctx.fill();
+      }
+    };
+  };
+}
+
+export interface ILineSymbolOptions extends IStyleSymbolOptions {
+  lineWidth?: number;
+}
+
+const defaultLineOptions = merge({
+  lineWidth: 1
+}, defaultStyleOptions);
+
+
+interface ICoordinatesObject {x: number; y: number;}
+
+export function lineRenderer(params?: ILineSymbolOptions) {
+  const options: ILineSymbolOptions = merge({}, defaultLineOptions, params || {});
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  const coordinateBisector = d3bisector((d: ICoordinatesObject) => { return d.x; }).right;
+
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    const data: ICoordinatesObject[] = [];
+    return {
+      render: (x: number, y: number) => {
+        const index = coordinateBisector(data, x);
+        data.splice(index, 0, {x, y});
+      },
+      done: () => {
+        if (data.length === 0) {
+          return;
+        }
+        ctx.beginPath();
+        data.forEach((d, i) => {
+          if (i === 0) {
+            ctx.moveTo(d.x, d.y);
+          } else {
+            ctx.lineTo(d.x, d.y);
+          }
+        });
+        ctx.strokeStyle = styles[mode];
+        ctx.stroke();
+      }
+    };
+  };
+}
+
+/**
+ * creates an parses a renderer
+ * @param symbol
+ * @returns {any}
+ */
+export function createRenderer<T>(symbol: ISymbol<T>|string): ISymbol<T> {
+  if (typeof symbol === 'string') {
+    switch(<string>symbol.charAt(0)) {
+      case '.':
+        return squareSymbol();
+      case 'b':
+        return diamondSymbol();
+      case 'l':
+        return lineRenderer();
+      default:
+        return circleSymbol();
+    }
+  }
+  return <ISymbol<T>>symbol;
 }
