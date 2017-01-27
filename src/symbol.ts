@@ -110,7 +110,7 @@ const defaultOptions: ISymbolOptions = {
 };
 
 export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options = merge(defaultOptions, params || {});
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
 
   const r = Math.sqrt(options.symbolSize / Math.PI);
   const tau = 2 * Math.PI;
@@ -141,7 +141,7 @@ export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
 }
 
 export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options = merge(defaultOptions, params || {});
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
 
   const length = Math.sqrt(options.symbolSize);
 
@@ -167,7 +167,7 @@ export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
 }
 
 export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options = merge(defaultOptions, params || {});
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
 
   const tan30 = Math.sqrt(1 / 3);
   const tan30Double = tan30 * 2;
@@ -200,7 +200,7 @@ export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
 }
 
 export function lineRenderer(params?: ISymbolOptions) {
-  const options = merge(defaultOptions, params || {});
+  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
 
   const styles = {
     [ERenderMode.NORMAL]: options.fillColor,
