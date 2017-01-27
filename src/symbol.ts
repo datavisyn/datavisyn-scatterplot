@@ -198,3 +198,34 @@ export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
     };
   };
 }
+
+export function lineRenderer(params?: ISymbolOptions) {
+  const options = merge(defaultOptions, params || {});
+
+  const styles = {
+    [ERenderMode.NORMAL]: options.fillColor,
+    [ERenderMode.HOVER]: options.hoverColor,
+    [ERenderMode.SELECTED]: options.selectedColor
+  };
+
+  const data = [];
+
+  return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
+    ctx.beginPath();
+    return {
+      render: (x: number, y: number) => {
+        data.push({x, y});
+      },
+      done: () => {
+        data.sort((a: {x: number}, b: {x: number}) => {
+          return a.x - b.x;
+        });
+        data.forEach((d) => {
+          ctx.lineTo(d.x, d.y);
+        });
+        ctx.fillStyle = styles[mode];
+        ctx.stroke();
+      }
+    };
+  };
+}
