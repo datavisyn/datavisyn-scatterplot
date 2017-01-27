@@ -30,7 +30,7 @@ export interface ILassoOptions {
 
 export default class Lasso {
   private props: ILassoOptions = {
-    lineWidth: 3,
+    lineWidth: 2,
     strokeStyle: 'rgba(0,0,0,1)',
     fillStyle: 'rgba(0,0,0,0.2)',
     pointRadius: 3,
@@ -95,6 +95,7 @@ export default class Lasso {
   render(ctx: CanvasRenderingContext2D) {
     const p = this.points;
     ctx.save();
+    ctx.beginPath();
 
     ctx.lineWidth = this.props.lineWidth;
     ctx.strokeStyle = this.props.strokeStyle;
@@ -109,6 +110,9 @@ export default class Lasso {
       ctx.fill();
       ctx.stroke();
     }
+    ctx.closePath();
+    ctx.restore();
+    ctx.beginPath();
 
 
     const renderPoint = (p: IPoint) => {
@@ -119,7 +123,6 @@ export default class Lasso {
       ctx.arc(p[0], p[1], this.props.pointRadius, 0, Math.PI * 2);
     };
 
-    ctx.beginPath();
     renderPoint(p[0]);
     renderPoint(this.current);
     ctx.closePath();
