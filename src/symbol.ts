@@ -14,7 +14,7 @@ import {
   symbolWye,
   SymbolType
 } from 'd3-shape';
-import {bisector as d3bisector} from 'd3-array'
+import {bisector as d3bisector} from 'd3-array';
 import merge from './merge';
 
 /**
