@@ -4,6 +4,7 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
+import {line as d3line, CurveFactory} from 'd3-shape';
 import {
   symbolCircle,
   symbolCross,
@@ -211,14 +212,15 @@ export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
 
 export interface ILineSymbolOptions extends IStyleSymbolOptions {
   lineWidth?: number;
+  curve?: CurveFactory; // d3 curve factory (e.g. curveCatmullRom)
 }
 
 const defaultLineOptions = merge({
-  lineWidth: 1
+  lineWidth: 1,
+  curve: null
 }, defaultStyleOptions);
 
-
-interface ICoordinatesObject {x: number; y: number;}
+declare type IPoint = [number, number];
 
 export function lineRenderer(params?: ILineSymbolOptions) {
   const options: ILineSymbolOptions = merge({}, defaultLineOptions, params || {});
@@ -229,27 +231,27 @@ export function lineRenderer(params?: ILineSymbolOptions) {
     [ERenderMode.SELECTED]: options.selectedColor
   };
 
-  const coordinateBisector = d3bisector((d: ICoordinatesObject) => { return d.x; }).right;
+  const coordinateBisector = d3bisector((d: IPoint) => d[0]).right;
 
   return (ctx: CanvasRenderingContext2D, mode: ERenderMode) => {
-    const data: ICoordinatesObject[] = [];
+    const line = d3line().context(ctx);
+
+    if(options.curve) {
+      line.curve(options.curve);
+    }
+
+    const data: IPoint[] = [];
     return {
       render: (x: number, y: number) => {
         const index = coordinateBisector(data, x);
-        data.splice(index, 0, {x, y});
+        data.splice(index, 0, [x, y]);
       },
       done: () => {
         if (data.length === 0) {
           return;
         }
         ctx.beginPath();
-        data.forEach((d, i) => {
-          if (i === 0) {
-            ctx.moveTo(d.x, d.y);
-          } else {
-            ctx.lineTo(d.x, d.y);
-          }
-        });
+        line(data);
         ctx.strokeStyle = styles[mode];
         ctx.stroke();
       }
