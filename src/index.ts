@@ -22,6 +22,6 @@ export function create<T>(data:T[], canvas:HTMLCanvasElement):Scatterplot<T> {
   return new Scatterplot(data, canvas);
 }
 
-export function dualAxis(data, canvas) {
-  return new DualAxisScatterplot(data, canvas);
+export function dualAxis(data, secondaryData, canvas) {
+  return new DualAxisScatterplot(data, secondaryData, canvas);
 }

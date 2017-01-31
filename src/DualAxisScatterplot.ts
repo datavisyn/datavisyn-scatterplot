@@ -4,7 +4,7 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import {axisLeft, axisBottom, AxisScale, Axis} from 'd3-axis';
+import {axisLeft, axisBottom, axisRight, AxisScale, Axis} from 'd3-axis';
 import {extent} from 'd3-array';
 import {format} from 'd3-format';
 import {scaleLinear} from 'd3-scale';
@@ -308,7 +308,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
     xscale: <IScale>scaleLinear().domain([0, 100]),
     yscale: <IScale>scaleLinear().domain([0, 100]),
-    y2scale: <IScale>scaleLinear().domain([0, 100]),
+    y2scale: <IScale>scaleLinear().domain([0, 1000]),
 
     symbol: <ISymbol<T>>circleSymbol(),
 
@@ -330,7 +330,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
   private readonly normalized2pixel = {
     x: scaleLinear(),
-    y: scaleLinear()
+    y: scaleLinear(),
+    y2: scaleLinear()
   };
   private canvasDataLayer: HTMLCanvasElement;
   private canvasSelectionLayer: HTMLCanvasElement;
@@ -355,7 +356,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
   private readonly parent: HTMLElement;
 
-  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
+  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
@@ -367,7 +368,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
 
-    this.setDataImpl(data);
+    this.setDataImpl(data, secondaryData);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.parent = root.ownerDocument.createElement('div');
@@ -381,7 +382,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
       </svg>
       <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
       <svg class="${cssprefix}-axis-right" style="width: ${this.props.margin.left + 2}px; right: 0">
-        <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
+        <g transform="translate(0,${this.props.margin.top})"><g>
       </svg>
       <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
       <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
@@ -437,19 +438,30 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     return this.tree.data();
   }
 
-  private setDataImpl(data: T[]) {
+  private setDataImpl(data: T[], secondaryData: T[]) {
     //generate a quad tree out of the data
     //work on a normalized dimension within the quadtree to
     // * be independent of the current pixel size
     // * but still consider the mapping function (linear, pow, log) from the data domain
     const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
     const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
-    this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+    if(data) {
+      this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+    }
+
+    if(secondaryData) {
+      this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+    }
   }
 
   set data(data: T[]) {
-    this.setDataImpl(data);
+    this.setDataImpl(data, null);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+    this.render(ERenderReason.DIRTY);
+  }
+
+  set secondaryData(secondaryData: T[]) {
+    this.setDataImpl(null, secondaryData);
     this.render(ERenderReason.DIRTY);
   }
 
@@ -604,7 +616,10 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
   private transformedScales() {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
-    return {xscale, yscale};
+    const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
+    console.log('yDomain', yscale.domain());
+    console.log('y2Domain', y2scale.domain());
+    return {xscale, yscale, y2scale};
   }
 
   private mousePosAtCanvas() {
@@ -848,12 +863,14 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     if (reason === ERenderReason.DIRTY) {
       this.props.xscale.range([0, boundsWidth]);
       this.props.yscale.range([boundsHeight, 0]);
+      this.props.y2scale.range([boundsHeight, 0]);
       this.normalized2pixel.x.range(this.props.xscale.range());
       this.normalized2pixel.y.range(this.props.yscale.range());
+      this.normalized2pixel.y2.range(this.props.y2scale.range());
     }
 
     //transform scale
-    const {xscale, yscale} = this.transformedScales();
+    const {xscale, yscale, y2scale} = this.transformedScales();
 
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     const nx = (v) => n2pX.invert(v),
@@ -926,7 +943,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
       this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
     };
 
-    const renderAxes = this.renderAxes.bind(this, xscale, yscale);
+    const renderAxes = this.renderAxes.bind(this, xscale, yscale, y2scale);
     const renderData = renderCtx.bind(this, false);
 
     const clearAutoZoomRedraw = () => {
@@ -970,9 +987,10 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     }
   }
 
-  protected renderAxes(xscale: IScale, yscale: IScale) {
+  protected renderAxes(xscale: IScale, yscale: IScale, y2scale: IScale) {
     const left = axisLeft(yscale),
       bottom = axisBottom(xscale),
+      right = axisRight(y2scale),
       $parent = select(this.parent);
     const setFormat = (axis: Axis<number>, key: string) => {
       const p = this.props.format[key];
@@ -985,6 +1003,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     setFormat(bottom, 'x');
     $parent.select('svg > g').call(left);
     $parent.select('svg:last-of-type > g').call(bottom);
+    $parent.select(`.${cssprefix}-axis-right > g`).call(right);
   }
 
   private renderTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, useAggregation: IBoundsPredicate, debug = false) {
