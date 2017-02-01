@@ -12,7 +12,7 @@ import {select, mouse, event as d3event} from 'd3-selection';
 import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
 import {drag as d3drag} from 'd3-drag';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
-import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
+import {circleSymbol, lineRenderer, ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
 import merge from './merge';
 import {
   forEachLeaf,
@@ -31,6 +31,7 @@ import Lasso, {ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
+import {line} from 'd3-shape';
 
 /**
  * a d3 scale essentially
@@ -174,10 +175,16 @@ export interface IScatterplotOptions<T> {
   ylim?: [number, number];
 
   /**
-   * symbol used to render an data point
+   * symbol used to render a data point of the primary dataset
    * default: steelblue circle
    */
-    symbol?: ISymbol<T>|string;
+  symbol?: ISymbol<T>|string;
+
+  /**
+   * renderer used to render secondary dataset
+   * default: steelblue circle
+   */
+  secondaryRenderer?: ISymbol<T>|string;
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -281,10 +288,10 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
   private props: IScatterplotOptions<T> = {
     margin: {
-      left: 32,
+      left: 48,
       top: 10,
       bottom: 32,
-      right: 32
+      right: 50
     },
     clickRadius: 10,
 
@@ -311,6 +318,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     y2scale: <IScale>scaleLinear().domain([0, 1000]),
 
     symbol: <ISymbol<T>>circleSymbol(),
+    secondaryRenderer: <ISymbol<T>>lineRenderer(),
 
     tooltipDelay: 500,
 
@@ -334,6 +342,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     y2: scaleLinear()
   };
   private canvasDataLayer: HTMLCanvasElement;
+  private canvasSecondaryDataLayer: HTMLCanvasElement;
   private canvasSelectionLayer: HTMLCanvasElement;
   private tree: Quadtree<T>;
   private secondaryTree: Quadtree<T>;
@@ -347,6 +356,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
   private readonly lasso = new Lasso();
   private readonly renderer: ISymbol<T>;
+  private readonly secondaryRenderer: ISymbol<T>;
 
   private currentTransform: ZoomTransform = zoomIdentity;
   private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
@@ -363,6 +373,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
 
     this.renderer = createRenderer(this.props.symbol);
+    this.secondaryRenderer = createRenderer(this.props.secondaryRenderer);
 
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
@@ -376,6 +387,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     //init dom
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
+      <canvas class="${cssprefix}-secondary-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
@@ -393,7 +405,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.parent.classList.add(cssprefix);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
-    this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
+    this.canvasSecondaryDataLayer = <HTMLCanvasElement>this.parent.children[1];
+    this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[2];
 
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
@@ -450,7 +463,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     }
 
     if(secondaryData) {
-      this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+      const domain2normalizedY2 = this.props.y2scale.copy().range(this.normalized2pixel.y2.domain());
+      this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY2(this.props.y(d)));
     }
   }
 
@@ -577,8 +591,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
   private checkResize() {
     const c = this.canvasDataLayer;
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-      this.canvasSelectionLayer.width = c.width = c.clientWidth;
-      this.canvasSelectionLayer.height = c.height = c.clientHeight;
+      this.canvasSelectionLayer.width = this.canvasSecondaryDataLayer.width = c.width = c.clientWidth;
+      this.canvasSelectionLayer.height = this.canvasSecondaryDataLayer.height = c.height = c.clientHeight;
       this.adaptMaxTranslation();
       return true;
     }
@@ -617,8 +631,6 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
-    console.log('yDomain', yscale.domain());
-    console.log('y2Domain', y2scale.domain());
     return {xscale, yscale, y2scale};
   }
 
@@ -746,6 +758,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     const evt = <D3ZoomEvent<any,any>>d3event;
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
+
     this.currentTransform = newValue;
     const scale = this.props.zoom.scale;
     const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
@@ -891,17 +904,18 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
       zoomLevel: this.currentTransform.k
     };
 
-    const renderCtx = (isSelection = false) => {
-      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
+    const renderCtx = (isSelection = false, isSecondary = false) => {
+      const ctx = (isSelection ? this.canvasSelectionLayer : isSecondary? this.canvasSecondaryDataLayer : this.canvasDataLayer).getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
-      const tree = isSelection ? this.selectionTree : this.tree;
-      const renderer = this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
+      const tree = isSelection ? this.selectionTree : isSecondary? this.secondaryTree : this.tree;
+      const renderer = isSecondary? this.secondaryRenderer(ctx, ERenderMode.NORMAL, renderInfo) : this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
-      this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);
+
+      this.renderTree(ctx, tree, renderer, xscale, isSecondary? y2scale : yscale, isNodeVisible, useAggregation, debug);
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
@@ -945,6 +959,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
 
     const renderAxes = this.renderAxes.bind(this, xscale, yscale, y2scale);
     const renderData = renderCtx.bind(this, false);
+    const renderSecondaryData = renderCtx.bind(this, false, true);
 
     const clearAutoZoomRedraw = () => {
       if (this.zommHandle >= 0) {
@@ -972,6 +987,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
         //just data needed after translation
         clearAutoZoomRedraw();
         renderData();
+        renderSecondaryData();
         break;
       case ERenderReason.AFTER_SCALE_AND_TRANSLATE:
       case ERenderReason.AFTER_SCALE:
@@ -982,6 +998,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
       default:
         clearAutoZoomRedraw();
         renderData();
+        renderSecondaryData();
         renderAxes();
         renderSelection();
     }

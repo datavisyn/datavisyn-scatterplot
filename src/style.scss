@@ -14,6 +14,10 @@
   canvas {
     @include abspos();
 
+    &.datavisyn-scatterplot-secondary-data-layer {
+      pointer-events: none;
+      z-index: 0;
+    }
     &.datavisyn-scatterplot-data-layer {
       pointer-events: none;
       z-index: 1;
