@@ -361,7 +361,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
   private currentTransform: ZoomTransform = zoomIdentity;
   private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
   private zoomStartTransform: ZoomTransform;
-  private zommHandle = -1;
+  private zoomHandle = -1;
   private dragHandle = -1;
 
   private readonly parent: HTMLElement;
@@ -962,10 +962,10 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     const renderSecondaryData = renderCtx.bind(this, false, true);
 
     const clearAutoZoomRedraw = () => {
-      if (this.zommHandle >= 0) {
+      if (this.zoomHandle >= 0) {
         //delete auto redraw timer
-        clearTimeout(this.zommHandle);
-        this.zommHandle = -1;
+        clearTimeout(this.zoomHandle);
+        this.zoomHandle = -1;
       }
     };
 
@@ -978,7 +978,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zommHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
