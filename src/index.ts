@@ -8,6 +8,7 @@ import DualAxisScatterplot from './DualAxisScatterplot';
 import * as _symbol from './symbol';
 import * as d3scale from 'd3-scale';
 export {default as Scatterplot, EScaleAxes, IAccessor, IScale, IScatterplotOptions, IWindow, IZoomOptions} from './Scatterplot';
+export {default as DualAxisScatterplot} from './DualAxisScatterplot';
 //export {default as MiniMap} from './MiniMap';
 
 /**

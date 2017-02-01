@@ -175,6 +175,11 @@ export interface IScatterplotOptions<T> {
   ylim?: [number, number];
 
   /**
+   * instead of specifying the scale just the y limits
+   */
+  y2lim?: [number, number];
+
+  /**
    * symbol used to render a data point of the primary dataset
    * default: steelblue circle
    */
@@ -371,6 +376,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
+    this.props.y2scale = fixScale(this.props.y2scale, this.props.y, data, props ? props.y2scale : null, props ? props.y2lim : null);
 
     this.renderer = createRenderer(this.props.symbol);
     this.secondaryRenderer = createRenderer(this.props.secondaryRenderer);
