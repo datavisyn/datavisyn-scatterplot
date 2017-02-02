@@ -400,6 +400,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
+    this.normalized2pixel.y2.domain(DEFAULT_NORMALIZED_RANGE);
 
     this.setDataImpl(data);
     this.setSecondaryData(secondaryData);
