@@ -342,7 +342,6 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     y2: scaleLinear()
   };
   private canvasDataLayer: HTMLCanvasElement;
-  private canvasSecondaryDataLayer: HTMLCanvasElement;
   private canvasSelectionLayer: HTMLCanvasElement;
   private tree: Quadtree<T>;
   private secondaryTree: Quadtree<T>;
@@ -387,7 +386,6 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     //init dom
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-secondary-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
@@ -405,8 +403,7 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.parent.classList.add(cssprefix);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
-    this.canvasSecondaryDataLayer = <HTMLCanvasElement>this.parent.children[1];
-    this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[2];
+    this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
 
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
@@ -591,8 +588,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
   private checkResize() {
     const c = this.canvasDataLayer;
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-      this.canvasSelectionLayer.width = this.canvasSecondaryDataLayer.width = c.width = c.clientWidth;
-      this.canvasSelectionLayer.height = this.canvasSecondaryDataLayer.height = c.height = c.clientHeight;
+      this.canvasSelectionLayer.width = c.width = c.clientWidth;
+      this.canvasSelectionLayer.height = c.height = c.clientHeight;
       this.adaptMaxTranslation();
       return true;
     }
@@ -905,8 +902,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     };
 
     const renderCtx = (isSelection = false, isSecondary = false) => {
-      const ctx = (isSelection ? this.canvasSelectionLayer : isSecondary? this.canvasSecondaryDataLayer : this.canvasDataLayer).getContext('2d');
-      ctx.clearRect(0, 0, c.width, c.height);
+      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
+      if(!isSecondary) ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
       ctx.clip();
