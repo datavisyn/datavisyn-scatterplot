@@ -31,7 +31,7 @@ module.exports = function (env) {
       }]
     },
     resolve: {
-      extensions: ['.webpack.js', '.web.js', '.js', '.ts', '.tsx'],
+      extensions: ['.webpack.js', '.web.js', '.ts', '.tsx', '.js'],
 
       modules: [path.resolve(__dirname, 'src'), 'node_modules']
     },
@@ -49,7 +49,7 @@ module.exports = function (env) {
     devServer: {
       contentBase: path.resolve(__dirname, 'build')
     },
-    devtool: isProduction ? 'cheap-module-source-map' : 'source-map'
+    devtool: 'source-map'
   };
   return base;
 };
