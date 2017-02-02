@@ -203,7 +203,7 @@ export interface IScatterplotOptions<T> {
    * renderer used to render secondary dataset
    * default: steelblue circle
    */
-  secondaryRenderer?: ISymbol<T>|string;
+  symbol2?: ISymbol<T>|string;
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -339,8 +339,8 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     yscale: <IScale>scaleLinear().domain([0, 100]),
     y2scale: <IScale>scaleLinear().domain([0, 1000]),
 
-    symbol: <ISymbol<T>>circleSymbol(),
-    secondaryRenderer: <ISymbol<T>>lineRenderer(),
+    symbol: 'o',
+    symbol2: 'o',
 
     tooltipDelay: 500,
 
@@ -392,10 +392,10 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
-    this.props.y2scale = fixScale(this.props.y2scale, this.props.y, data, props ? props.y2scale : null, props ? props.y2lim : null);
+    this.props.y2scale = fixScale(this.props.y2scale, this.props.y2, secondaryData, props ? props.y2scale : null, props ? props.y2lim : null);
 
     this.renderer = createRenderer(this.props.symbol);
-    this.secondaryRenderer = createRenderer(this.props.secondaryRenderer);
+    this.secondaryRenderer = createRenderer(this.props.symbol2);
 
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));

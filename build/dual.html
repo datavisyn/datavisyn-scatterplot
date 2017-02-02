@@ -44,7 +44,7 @@
       for (var i = 0; i < count; ++i) {
         //data.push({x: 100*i/count, y: 100*(count-i)/count});
         data.push({x: i*100/(count-1), y: Math.random()*100, y2: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
-        data2.push({x: i*100/(count-1), y: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
+        data2.push({x: i*100/(count-1), y: clamp(Math.floor(i*1000/(count-1)+ (Math.random()-0.5)*500), 0, 1000)});
       }
       console.timeEnd('gen');
       var div = document.querySelector('#root');
@@ -53,10 +53,10 @@
       var s = new datavisyn.scatterplot.DualAxisScatterplot(data, data2, div, {
           xlim: [0,100],
           ylim: [0,100],
-          y2lim: [0,100],
-          zoom: { scale: datavisyn.scatterplot.EScaleAxes.x},
-          symbol: 'p',
-          secondarySymbol: 'l'
+          y2lim: [0,1000],
+          //zoom: { scale: datavisyn.scatterplot.EScaleAxes.x},
+          symbol: 'o',
+          symbol2: '.'
       });
       //hack render to have information
       var bak = s.render.bind(s);
