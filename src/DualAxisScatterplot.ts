@@ -480,28 +480,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  private isSelectAble() {
-    return this.props.isSelectEvent != null && (<any>this.props.isSelectEvent) !== false;
-  }
-
-  private hasExtras() {
-    return this.props.extras != null;
-  }
-
-  private hasTooltips() {
-    return this.props.showTooltip != null && (<any>this.props.showTooltip) !== false;
-  }
-
-  /**
-   * returns the current selection
-   */
-  get selection() {
-    if (!this.isSelectAble()) {
-      return [];
-    }
-    return this.selectionTree.data();
-  }
-
   /**
    * sets the current selection
    * @param selection
@@ -510,47 +488,22 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.setSelection(selection);
   }
 
-  setSelection(selection: T[]) {
-    if (!this.isSelectAble()) {
-      return false;
-    }
-    if (selection == null) {
-      selection = []; //ensure valid value
-    }
-    //this.lasso.clear();
-    if (selection.length === 0) {
-      return this.clearSelection();
-    }
-    //find the delta
-    let changed = false;
-    const s = this.selection.slice();
-    selection.forEach((sNew) => {
-      const i = s.indexOf(sNew);
-      if (i < 0) { //new
-        this.selectionTree.add(sNew);
-        changed = true;
-      } else {
-        s.splice(i, 1); //mark as used
-      }
-    });
-    changed = changed || s.length > 0;
-    //remove removed items
-    this.selectionTree.removeAll(s);
+  setSelection(selection: T[]): boolean {
+    const changed = super.setSelection(selection);
+
     if (changed) {
-      this.emit(DualAxisScatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
+
     return changed;
   }
 
   /**
    * clears the selection, same as .selection=[]
    */
-  clearSelection() {
-    const changed = this.selectionTree !== null && this.selectionTree.size() > 0;
+  clearSelection(): boolean {
+    const changed = super.clearSelection();
     if (changed) {
-      this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
-      this.emit(DualAxisScatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
@@ -582,34 +535,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.emit(DualAxisScatterplot.EVENT_SELECTION_CHANGED, this);
     this.render(ERenderReason.SELECTION_CHANGED);
     return true;
-  }
-
-  private selectWithTester(tester: ITester) {
-    const selection = findByTester(this.tree, tester);
-    return this.setSelection(selection);
-  }
-
-  private checkResize() {
-    const c = this.canvasDataLayer;
-    if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-      this.canvasSelectionLayer.width = c.width = c.clientWidth;
-      this.canvasSelectionLayer.height = c.height = c.clientHeight;
-      this.adaptMaxTranslation();
-      return true;
-    }
-    return false;
-  }
-
-  private adaptMaxTranslation() {
-    if (!this.zoomBehavior) {
-      return;
-    }
-
-    const availableWidth = this.canvasDataLayer.width - this.props.margin.left - this.props.margin.right;
-    const availableHeight = this.canvasDataLayer.height - this.props.margin.top - this.props.margin.bottom;
-    this.zoomBehavior
-      .extent([[0, 0], [availableWidth, availableHeight]])
-      .translateExtent([[0, 0], [availableWidth, availableHeight]]);
   }
 
   resized() {
