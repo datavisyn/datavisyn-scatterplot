@@ -413,27 +413,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
 
-    if (this.props.zoom.scale !== null) {
-      const zoom = this.props.zoom;
-      //register zoom
-      this.zoomBehavior = d3zoom()
-        .on('start', this.onZoomStart.bind(this))
-        .on('zoom', this.onZoom.bind(this))
-        .on('end', this.onZoomEnd.bind(this))
-        .scaleExtent(zoom.scaleExtent)
-        .translateExtent([[0,0], [+Infinity, +Infinity]])
-        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
-      $parent
-        .call(this.zoomBehavior)
-        .on('wheel', () => d3event.preventDefault());
-      if (zoom.window != null) {
-        this.window = zoom.window;
-      } else {
-        this.zoomBehavior.scaleTo($parent, zoom.scaleTo);
-        this.zoomBehavior.translateBy($parent, zoom.translateBy[0], zoom.translateBy[1]);
-      }
-    }
-
     if (this.isSelectAble()) {
       const drag = d3drag()
         .on('start', this.onDragStart.bind(this))
@@ -541,29 +520,11 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  private rescale(axis: EScaleAxes, scale: IScale) {
-    const c = this.currentTransform;
-    const p = this.props.zoom.scale;
-    switch (axis) {
-      case EScaleAxes.x:
-        return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
-      case EScaleAxes.y:
-        return p === EScaleAxes.y || p === EScaleAxes.xy ? c.rescaleY(scale) : scale;
-    }
-    throw new Error('Not Implemented');
-  }
-
   private transformedScales() {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
     return {xscale, yscale, y2scale};
-  }
-
-  private mousePosAtCanvas() {
-    const pos = mouse(this.parent);
-    // shift by the margin since the scales doesn't include them for better scaling experience
-    return [pos[0] - this.props.margin.left, pos[1] - this.props.margin.top];
   }
 
   private getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
@@ -662,52 +623,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     };
   }
 
-  private onZoomStart() {
-    this.zoomStartTransform = this.currentTransform;
-  }
-
-  private onZoomEnd() {
-    const start = this.zoomStartTransform;
-    const end = this.currentTransform;
-    const tchanged = (start.x !== end.x || start.y !== end.y);
-    const schanged = (start.k !== end.k);
-    if (tchanged && schanged) {
-      this.render(ERenderReason.AFTER_SCALE_AND_TRANSLATE);
-    } else if (schanged) {
-      this.render(ERenderReason.AFTER_SCALE);
-    } else if (tchanged) {
-      this.render(ERenderReason.AFTER_TRANSLATE);
-    }
-  }
-
-  private onZoom() {
-    const evt = <D3ZoomEvent<any,any>>d3event;
-    const newValue: ZoomTransform = evt.transform;
-    const oldValue = this.currentTransform;
-
-    this.currentTransform = newValue;
-    const scale = this.props.zoom.scale;
-    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
-    const schanged = (oldValue.k !== newValue.k);
-    const delta = {
-      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
-      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y : 0,
-      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1,
-      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
-    };
-    if (tchanged && schanged) {
-      this.emit(DualAxisScatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
-    } else if (schanged) {
-      this.emit(DualAxisScatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_SCALE, delta);
-    } else if (tchanged) {
-      this.emit(DualAxisScatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_TRANSLATE, delta);
-    }
-    //nothing if no changed
-  }
-
   private onDragStart() {
     this.lasso.start(d3event.x, d3event.y);
     if (!this.clearSelection()) {
@@ -784,7 +699,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.props.showTooltip(this.parent, [], 0, 0);
   }
 
-  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
+  protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
     if (this.checkResize()) {
       //check resize
       return this.resized();

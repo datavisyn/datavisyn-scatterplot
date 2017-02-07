@@ -464,28 +464,10 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  private rescale(axis: EScaleAxes, scale: IScale) {
-    const c = this.currentTransform;
-    const p = this.props.zoom.scale;
-    switch (axis) {
-      case EScaleAxes.x:
-        return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
-      case EScaleAxes.y:
-        return p === EScaleAxes.y || p === EScaleAxes.xy ? c.rescaleY(scale) : scale;
-    }
-    throw new Error('Not Implemented');
-  }
-
-  private transformedScales() {
+  protected transformedScales() {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return {xscale, yscale};
-  }
-
-  private mousePosAtCanvas() {
-    const pos = mouse(this.parent);
-    // shift by the margin since the scales doesn't include them for better scaling experience
-    return [pos[0] - this.props.margin.left, pos[1] - this.props.margin.top];
   }
 
   private getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
@@ -525,43 +507,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   }
 
   /**
-   * sets the current visible window
-   * @param window
-   */
-  set window(window: IWindow) {
-    const {k, tx, ty} = this.window2transform(window);
-    const $zoom = select(this.parent);
-    this.zoomBehavior.scaleTo($zoom, k);
-    this.zoomBehavior.translateBy($zoom, tx, ty);
-    this.render();
-  }
-
-  private window2transform(window: IWindow) {
-    const range2transform = (minMax: IMinMax, scale: IScale) => {
-      const pmin = scale(minMax[0]);
-      const pmax = scale(minMax[1]);
-      const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
-      return {k, t: (scale.range()[0] - pmin)};
-    };
-    const s = this.props.zoom.scale;
-    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
-    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
-    let k = 1;
-    if (x && y) {
-      k = Math.min(x.k, y.k);
-    } else if (x) {
-      k = x.k;
-    } else if (y) {
-      k = y.k;
-    }
-    return {
-      k,
-      tx: x ? x.t : 0,
-      ty: y ? y.t : 0
-    };
-  }
-
-  /**
    * returns the total domain
    * @returns {{xMinMax: number[], yMinMax: number[]}}
    */
@@ -570,63 +515,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       xMinMax: <IMinMax>this.props.xscale.domain(),
       yMinMax: <IMinMax>this.props.yscale.domain(),
     };
-  }
-
-  /**
-   * returns the current visible window
-   * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
-   */
-  get window(): IWindow {
-    const {xscale, yscale} = this.transformedScales();
-    return {
-      xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
-      yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))
-    };
-  }
-
-  private onZoomStart() {
-    this.zoomStartTransform = this.currentTransform;
-  }
-
-  private onZoomEnd() {
-    const start = this.zoomStartTransform;
-    const end = this.currentTransform;
-    const tchanged = (start.x !== end.x || start.y !== end.y);
-    const schanged = (start.k !== end.k);
-    if (tchanged && schanged) {
-      this.render(ERenderReason.AFTER_SCALE_AND_TRANSLATE);
-    } else if (schanged) {
-      this.render(ERenderReason.AFTER_SCALE);
-    } else if (tchanged) {
-      this.render(ERenderReason.AFTER_TRANSLATE);
-    }
-  }
-
-  private onZoom() {
-    const evt = <D3ZoomEvent<any,any>>d3event;
-    const newValue: ZoomTransform = evt.transform;
-    const oldValue = this.currentTransform;
-    this.currentTransform = newValue;
-    const scale = this.props.zoom.scale;
-    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
-    const schanged = (oldValue.k !== newValue.k);
-    const delta = {
-      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
-      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y : 0,
-      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1,
-      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
-    };
-    if (tchanged && schanged) {
-      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
-    } else if (schanged) {
-      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_SCALE, delta);
-    } else if (tchanged) {
-      this.emit(Scatterplot.EVENT_WINDOW_CHANGED, this.window);
-      this.render(ERenderReason.PERFORM_TRANSLATE, delta);
-    }
-    //nothing if no changed
   }
 
   private onDragStart() {
@@ -705,7 +593,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.props.showTooltip(this.parent, [], 0, 0);
   }
 
-  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
+  protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
     if (this.checkResize()) {
       //check resize
       return this.resized();

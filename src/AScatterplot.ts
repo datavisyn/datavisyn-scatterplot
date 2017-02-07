@@ -93,6 +93,8 @@ export interface IFormatOptions {
 /**
  * scatterplot options
  */
+
+// TODO: split baseProps and childProps to two different types
 export interface IScatterplotOptions<T> {
   /**
    * margin for the scatterplot area
@@ -253,6 +255,13 @@ function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScal
   return current.domain(extent(data, acc));
 }
 
+export interface ITransformDelta {
+  x: number;
+  y: number;
+  kx: number;
+  ky: number;
+}
+
 /**
  * an class for rendering a scatterplot in a canvas
  */
@@ -262,6 +271,8 @@ abstract class AScatterplot<T> extends EventEmitter {
   static EVENT_RENDER = 'render';
   static EVENT_WINDOW_CHANGED = 'windowChanged';
 
+  // TODO: use childProps type
+  private childProps;
   protected baseProps: IScatterplotOptions<T> = {
     margin: {
       left: 48,
@@ -320,10 +331,34 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected readonly parent: HTMLElement;
 
-  constructor(data: T[], root: HTMLElement) {
+  constructor(data: T[], root: HTMLElement, childProps?) {
     super();
 
     this.parent = root.ownerDocument.createElement('div');
+
+    //need to use d3 for d3.mouse to work
+    const $parent = select(this.parent);
+
+    if (this.baseProps.zoom.scale !== null) {
+      const zoom = this.baseProps.zoom;
+      //register zoom
+      this.zoomBehavior = d3zoom()
+        .on('start', this.onZoomStart.bind(this))
+        .on('zoom', this.onZoom.bind(this))
+        .on('end', this.onZoomEnd.bind(this))
+        .scaleExtent(zoom.scaleExtent)
+        .translateExtent([[0,0], [+Infinity, +Infinity]])
+        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.baseProps.isSelectEvent(<MouseEvent>d3event)));
+      $parent
+        .call(this.zoomBehavior)
+        .on('wheel', () => d3event.preventDefault());
+      if (zoom.window != null) {
+        this.window = zoom.window;
+      } else {
+        this.zoomBehavior.scaleTo($parent, zoom.scaleTo);
+        this.zoomBehavior.translateBy($parent, zoom.translateBy[0], zoom.translateBy[1]);
+      }
+    }
   }
 
   protected isSelectAble() {
@@ -428,6 +463,122 @@ abstract class AScatterplot<T> extends EventEmitter {
       .extent([[0, 0], [availableWidth, availableHeight]])
       .translateExtent([[0, 0], [availableWidth, availableHeight]]);
   }
+
+  protected rescale(axis: EScaleAxes, scale: IScale) {
+    const c = this.currentTransform;
+    const p = this.baseProps.zoom.scale;
+    switch (axis) {
+      case EScaleAxes.x:
+        return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
+      case EScaleAxes.y:
+        return p === EScaleAxes.y || p === EScaleAxes.xy ? c.rescaleY(scale) : scale;
+    }
+    throw new Error('Not Implemented');
+  }
+
+  protected mousePosAtCanvas() {
+    const pos = mouse(this.parent);
+    // shift by the margin since the scales doesn't include them for better scaling experience
+    return [pos[0] - this.baseProps.margin.left, pos[1] - this.baseProps.margin.top];
+  }
+
+  /**
+   * sets the current visible window
+   * @param window
+   */
+  set window(window: IWindow) {
+    const {k, tx, ty} = this.window2transform(window);
+    const $zoom = select(this.parent);
+    this.zoomBehavior.scaleTo($zoom, k);
+    this.zoomBehavior.translateBy($zoom, tx, ty);
+    this.render();
+  }
+
+  private window2transform(window: IWindow) {
+    const range2transform = (minMax: IMinMax, scale: IScale) => {
+      const pmin = scale(minMax[0]);
+      const pmax = scale(minMax[1]);
+      const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
+      return {k, t: (scale.range()[0] - pmin)};
+    };
+    const s = this.baseProps.zoom.scale;
+    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.childProps.xscale) : null;
+    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.childProps.yscale) : null;
+    let k = 1;
+    if (x && y) {
+      k = Math.min(x.k, y.k);
+    } else if (x) {
+      k = x.k;
+    } else if (y) {
+      k = y.k;
+    }
+    return {
+      k,
+      tx: x ? x.t : 0,
+      ty: y ? y.t : 0
+    };
+  }
+
+  /**
+   * returns the current visible window
+   * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
+   */
+  get window(): IWindow {
+    const {xscale, yscale} = this.transformedScales();
+    return {
+      xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
+      yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))
+    };
+  }
+
+  protected onZoomStart() {
+    this.zoomStartTransform = this.currentTransform;
+  }
+
+  protected onZoom() {
+    const evt = <D3ZoomEvent<any,any>>d3event;
+    const newValue: ZoomTransform = evt.transform;
+    const oldValue = this.currentTransform;
+    this.currentTransform = newValue;
+    const scale = this.baseProps.zoom.scale;
+    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
+    const schanged = (oldValue.k !== newValue.k);
+    const delta = {
+      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
+      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y : 0,
+      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1,
+      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
+    };
+    if (tchanged && schanged) {
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
+    } else if (schanged) {
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.render(ERenderReason.PERFORM_SCALE, delta);
+    } else if (tchanged) {
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.render(ERenderReason.PERFORM_TRANSLATE, delta);
+    }
+    //nothing if no changed
+  }
+
+  protected onZoomEnd() {
+    const start = this.zoomStartTransform;
+    const end = this.currentTransform;
+    const tchanged = (start.x !== end.x || start.y !== end.y);
+    const schanged = (start.k !== end.k);
+    if (tchanged && schanged) {
+      this.render(ERenderReason.AFTER_SCALE_AND_TRANSLATE);
+    } else if (schanged) {
+      this.render(ERenderReason.AFTER_SCALE);
+    } else if (tchanged) {
+      this.render(ERenderReason.AFTER_TRANSLATE);
+    }
+  }
+
+  protected abstract transformedScales();
+  protected abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
+
 
 }
 
