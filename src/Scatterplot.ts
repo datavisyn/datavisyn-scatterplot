@@ -31,69 +31,19 @@ import Lasso, {ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
-import AScatterplot from './AScatterplot';
-
-/**
- * a d3 scale essentially
- */
-export interface IScale extends AxisScale<number>, ZoomScale {
-  range(range: number[]);
-  range(): number[];
-  domain(): number[];
-  domain(domain: number[]);
-  invert(v: number): number;
-  copy(): this;
-}
-
-export interface IAccessor<T> {
-  (v: T): number;
-}
-
-export enum EScaleAxes {
-  x, y, xy
-}
-
-export interface IZoomOptions {
-  /**
-   * scaling option whether to scale both, one, or no axis
-   */
-  scale?: EScaleAxes;
-
-  /**
-   * delay before a full redraw is shown during zooming
-   */
-  delay?: number;
-  /**
-   * min max scaling factor
-   * default: 0.1, 10
-   */
-  scaleExtent?: [number, number];
-
-  /**
-   * initial zoom window
-   */
-  window?: IWindow;
-
-  /**
-   * initial scale factor
-   */
-  scaleTo?: number;
-  /**
-   * initial translate
-   */
-  translateBy?: [number, number];
-}
-
-export interface IFormatOptions {
-  /**
-   * d3 format used for formatting the x axis
-   */
-  x?: string | ((n: number) => string);
-  /**
-   * d3 format used for formatting the y axis
-   */
-  y?: string | ((n: number) => string);
-}
+import {line} from 'd3-shape';
+import AScatterplot, {
+  fixScale,
+  IScale,
+  IScalesObject,
+  IAccessor,
+  EScaleAxes,
+  IZoomOptions,
+  IFormatOptions,
+  ERenderReason,
+  IMinMax,
+  IWindow
+} from './AScatterplot';
 
 /**
  * scatterplot options
@@ -224,41 +174,6 @@ export interface IScatterplotOptions<T> {
 
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
-
-/**
- * reasons why a new render pass is needed
- */
-export enum ERenderReason {
-  DIRTY,
-  SELECTION_CHANGED,
-  ZOOMED,
-  PERFORM_SCALE_AND_TRANSLATE,
-  AFTER_SCALE_AND_TRANSLATE,
-  PERFORM_TRANSLATE,
-  AFTER_TRANSLATE,
-  PERFORM_SCALE,
-  AFTER_SCALE
-}
-
-export declare type IMinMax = [number, number];
-
-/**
- * visible window
- */
-export interface IWindow {
-  xMinMax: IMinMax;
-  yMinMax: IMinMax;
-}
-
-function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
-  if (given) {
-    return given;
-  }
-  if (givenLimits) {
-    return current.domain(givenLimits);
-  }
-  return current.domain(extent(data, acc));
-}
 
 /**
  * a class for rendering a scatterplot in a canvas
@@ -411,60 +326,11 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  setSelection(selection: T[]): boolean {
-    const changed = super.setSelection(selection);
-
-    if (changed) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-
-    return changed;
-  }
-
-  /**
-   * clears the selection, same as .selection=[]
-   */
-  clearSelection(): boolean {
-    const changed = super.clearSelection();
-    if (changed) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-    return changed;
-  }
-
-  /**
-   * shortcut to add items to the selection
-   * @param items
-   */
-  addToSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
-      return false;
-    }
-    this.selectionTree.addAll(items);
-    this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
-    this.render(ERenderReason.SELECTION_CHANGED);
-    return true;
-  }
-
-  /**
-   * shortcut to remove items from the selection
-   * @param items
-   */
-  removeFromSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
-      return false;
-    }
-    this.selectionTree.removeAll(items);
-    this.emit(Scatterplot.EVENT_SELECTION_CHANGED, this);
-    this.render(ERenderReason.SELECTION_CHANGED);
-    return true;
-  }
-
   resized() {
     this.render(ERenderReason.DIRTY);
   }
 
-  protected transformedScales() {
+  protected transformedScales(): IScalesObject {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return {xscale, yscale};

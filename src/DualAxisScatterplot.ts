@@ -32,68 +32,21 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
 import {line} from 'd3-shape';
-import AScatterplot from './AScatterplot';
+import AScatterplot, {
+  fixScale,
+  IScale,
+  IScalesObject,
+  IAccessor,
+  EScaleAxes,
+  IZoomOptions,
+  IFormatOptions,
+  ERenderReason,
+  IMinMax,
+  IWindow
+} from './AScatterplot';
 
-/**
- * a d3 scale essentially
- */
-export interface IScale extends AxisScale<number>, ZoomScale {
-  range(range: number[]);
-  range(): number[];
-  domain(): number[];
-  domain(domain: number[]);
-  invert(v: number): number;
-  copy(): this;
-}
-
-export interface IAccessor<T> {
-  (v: T): number;
-}
-
-export enum EScaleAxes {
-  x, y, xy
-}
-
-export interface IZoomOptions {
-  /**
-   * scaling option whether to scale both, one, or no axis
-   */
-  scale?: EScaleAxes;
-
-  /**
-   * delay before a full redraw is shown during zooming
-   */
-  delay?: number;
-  /**
-   * min max scaling factor
-   * default: 0.1, 10
-   */
-  scaleExtent?: [number, number];
-
-  /**
-   * initial zoom window
-   */
-  window?: IWindow;
-
-  /**
-   * initial scale factor
-   */
-  scaleTo?: number;
-  /**
-   * initial translate
-   */
-  translateBy?: [number, number];
-}
-
-export interface IFormatOptions {
-  /**
-   * d3 format used for formatting the x axis
-   */
-  x?: string | ((n: number) => string);
-  /**
-   * d3 format used for formatting the y axis
-   */
-  y?: string | ((n: number) => string);
+export interface IScalesObjectDualAxis extends IScalesObject {
+  y2scale: IScale;
 }
 
 /**
@@ -264,42 +217,7 @@ export interface IScatterplotOptions<T> {
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
 /**
- * reasons why a new render pass is needed
- */
-export enum ERenderReason {
-  DIRTY,
-  SELECTION_CHANGED,
-  ZOOMED,
-  PERFORM_SCALE_AND_TRANSLATE,
-  AFTER_SCALE_AND_TRANSLATE,
-  PERFORM_TRANSLATE,
-  AFTER_TRANSLATE,
-  PERFORM_SCALE,
-  AFTER_SCALE
-}
-
-export declare type IMinMax = [number, number];
-
-/**
- * visible window
- */
-export interface IWindow {
-  xMinMax: IMinMax;
-  yMinMax: IMinMax;
-}
-
-function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
-  if (given) {
-    return given;
-  }
-  if (givenLimits) {
-    return current.domain(givenLimits);
-  }
-  return current.domain(extent(data, acc));
-}
-
-/**
- * a class for rendering a scatterplot in a canvas
+ * a class for rendering a double y-axis scatterplot in a canvas
  */
 export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
@@ -459,68 +377,12 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  /**
-   * sets the current selection
-   * @param selection
-   */
-  set selection(selection: T[]) {
-    this.setSelection(selection);
-  }
-
-  setSelection(selection: T[]): boolean {
-    const changed = super.setSelection(selection);
-
-    if (changed) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-
-    return changed;
-  }
-
-  /**
-   * clears the selection, same as .selection=[]
-   */
-  clearSelection(): boolean {
-    const changed = super.clearSelection();
-    if (changed) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-    return changed;
-  }
-
-  /**
-   * shortcut to add items to the selection
-   * @param items
-   */
-  addToSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
-      return false;
-    }
-    this.selectionTree.addAll(items);
-    this.emit(DualAxisScatterplot.EVENT_SELECTION_CHANGED, this);
-    this.render(ERenderReason.SELECTION_CHANGED);
-    return true;
-  }
-
-  /**
-   * shortcut to remove items from the selection
-   * @param items
-   */
-  removeFromSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
-      return false;
-    }
-    this.selectionTree.removeAll(items);
-    this.emit(DualAxisScatterplot.EVENT_SELECTION_CHANGED, this);
-    this.render(ERenderReason.SELECTION_CHANGED);
-    return true;
-  }
 
   resized() {
     this.render(ERenderReason.DIRTY);
   }
 
-  private transformedScales() {
+  protected transformedScales(): IScalesObjectDualAxis {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
@@ -564,43 +426,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
   }
 
   /**
-   * sets the current visible window
-   * @param window
-   */
-  set window(window: IWindow) {
-    const {k, tx, ty} = this.window2transform(window);
-    const $zoom = select(this.parent);
-    this.zoomBehavior.scaleTo($zoom, k);
-    this.zoomBehavior.translateBy($zoom, tx, ty);
-    this.render();
-  }
-
-  private window2transform(window: IWindow) {
-    const range2transform = (minMax: IMinMax, scale: IScale) => {
-      const pmin = scale(minMax[0]);
-      const pmax = scale(minMax[1]);
-      const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
-      return {k, t: (scale.range()[0] - pmin)};
-    };
-    const s = this.props.zoom.scale;
-    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
-    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
-    let k = 1;
-    if (x && y) {
-      k = Math.min(x.k, y.k);
-    } else if (x) {
-      k = x.k;
-    } else if (y) {
-      k = y.k;
-    }
-    return {
-      k,
-      tx: x ? x.t : 0,
-      ty: y ? y.t : 0
-    };
-  }
-
-  /**
    * returns the total domain
    * @returns {{xMinMax: number[], yMinMax: number[]}}
    */
@@ -608,18 +433,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     return {
       xMinMax: <IMinMax>this.props.xscale.domain(),
       yMinMax: <IMinMax>this.props.yscale.domain(),
-    };
-  }
-
-  /**
-   * returns the current visible window
-   * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
-   */
-  get window(): IWindow {
-    const {xscale, yscale} = this.transformedScales();
-    return {
-      xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
-      yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))
     };
   }
 

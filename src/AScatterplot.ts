@@ -43,6 +43,11 @@ export interface IScale extends AxisScale<number>, ZoomScale {
   copy(): this;
 }
 
+export interface IScalesObject {
+  xscale: IScale;
+  yscale: IScale;
+}
+
 export interface IAccessor<T> {
   (v: T): number;
 }
@@ -245,7 +250,7 @@ export interface IWindow {
   yMinMax: IMinMax;
 }
 
-function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
+export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
   if (given) {
     return given;
   }
@@ -419,6 +424,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.selectionTree.removeAll(s);
     if (changed) {
       this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
+      this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
   }
@@ -431,10 +437,39 @@ abstract class AScatterplot<T> extends EventEmitter {
     if (changed) {
       this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
       this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
-
+      this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
   }
+
+  /**
+   * shortcut to add items to the selection
+   * @param items
+   */
+  addToSelection(items: T[]) {
+    if (items.length === 0 || !this.isSelectAble()) {
+      return false;
+    }
+    this.selectionTree.addAll(items);
+    this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
+    this.render(ERenderReason.SELECTION_CHANGED);
+    return true;
+  }
+
+  /**
+   * shortcut to remove items from the selection
+   * @param items
+   */
+  removeFromSelection(items: T[]) {
+    if (items.length === 0 || !this.isSelectAble()) {
+      return false;
+    }
+    this.selectionTree.removeAll(items);
+    this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
+    this.render(ERenderReason.SELECTION_CHANGED);
+    return true;
+  }
+
 
   protected selectWithTester(tester: ITester) {
     const selection = findByTester(this.tree, tester);
