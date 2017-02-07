@@ -32,6 +32,7 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
 import {line} from 'd3-shape';
+import AScatterplot from './AScatterplot';
 
 /**
  * a d3 scale essentially
@@ -300,10 +301,7 @@ function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScal
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class DualAxisScatterplot<T> extends EventEmitter {
-  static EVENT_SELECTION_CHANGED = 'selectionChanged';
-  static EVENT_RENDER = 'render';
-  static EVENT_WINDOW_CHANGED = 'windowChanged';
+export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
   private props: IScatterplotOptions<T> = {
     margin: {
@@ -363,32 +361,15 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     y: scaleLinear(),
     y2: scaleLinear()
   };
-  private canvasDataLayer: HTMLCanvasElement;
-  private canvasSelectionLayer: HTMLCanvasElement;
-  private tree: Quadtree<T>;
+
   private secondaryTree: Quadtree<T>;
-  private selectionTree: Quadtree<T>;
 
-  /**
-   * timout handle when the tooltip is shown
-   * @type {number}
-   */
-  private showTooltipHandle = -1;
 
-  private readonly lasso = new Lasso();
   private readonly renderer: ISymbol<T>;
   private readonly secondaryRenderer: ISymbol<T>;
 
-  private currentTransform: ZoomTransform = zoomIdentity;
-  private readonly zoomBehavior: ZoomBehavior<HTMLElement, any>;
-  private zoomStartTransform: ZoomTransform;
-  private zoomHandle = -1;
-  private dragHandle = -1;
-
-  private readonly parent: HTMLElement;
-
   constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
-    super();
+    super(data, root);
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
@@ -406,7 +387,6 @@ export default class DualAxisScatterplot<T> extends EventEmitter {
     this.setSecondaryData(secondaryData);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
-    this.parent = root.ownerDocument.createElement('div');
     root.appendChild(this.parent);
     //init dom
     this.parent.innerHTML = `
