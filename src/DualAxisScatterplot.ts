@@ -107,7 +107,7 @@ const customBaseProps = {
  */
 export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
-  private props: IScatterplotOptionsDualAxis<T> = {
+  protected props: IScatterplotOptionsDualAxis<T> = {
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -127,7 +127,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
   };
 
 
-  private readonly normalized2pixel = {
+  protected readonly normalized2pixel = {
     x: scaleLinear(),
     y: scaleLinear(),
     y2: scaleLinear()
@@ -158,38 +158,18 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.setSecondaryData(secondaryData);
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
-    root.appendChild(this.parent);
-    //init dom
-    this.parent.innerHTML = `
-      <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
-      <svg class="${cssprefix}-axis-left" style="width: ${this.baseProps.margin.left + 2}px;">
-        <g transform="translate(${this.baseProps.margin.left},${this.baseProps.margin.top})"><g>
-      </svg>
-      <div class="${cssprefix}-axis-left-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px"><div>${this.props.ylabel}</div></div>
+    this.initDOM(`
       <svg class="${cssprefix}-axis-right" style="width: ${this.baseProps.margin.left + 2}px; right: 0">
         <g transform="translate(0,${this.baseProps.margin.top})"><g>
       </svg>
       <div class="${cssprefix}-axis-right-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
-      <svg class="${cssprefix}-axis-bottom" style="height: ${this.baseProps.margin.bottom}px;">
-        <g transform="translate(${this.baseProps.margin.left},0)"><g>
-      </svg>
-      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.baseProps.margin.left + 2}px; right: ${this.baseProps.margin.right}px"><div>${this.props.xlabel}</div></div>
-    `;
-    this.parent.classList.add(cssprefix);
+    `);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
     this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
-
-    //need to use d3 for d3.mouse to work
-    const $parent = select(this.parent);
   }
 
-  get data() {
-    return this.tree.data();
-  }
-
-  private setDataImpl(data: T[]) {
+  protected setDataImpl(data: T[]) {
     //generate a quad tree out of the data
     //work on a normalized dimension within the quadtree to
     // * be independent of the current pixel size
@@ -221,36 +201,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
     return {xscale, yscale, y2scale};
-  }
-
-  protected getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
-    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
-
-    function range(range: number[]) {
-      return Math.abs(range[1] - range[0]);
-    }
-
-    const computeClickRadius = () => {
-      //compute the data domain radius based on xscale and the scaling factor
-      const view = this.baseProps.clickRadius;
-      const transform = this.currentTransform;
-      const scale = this.baseProps.zoom.scale;
-      const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
-      const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
-      const viewSizeX = kX * range(this.normalized2pixel.x.range());
-      const viewSizeY = kY * range(this.normalized2pixel.y.range());
-      //tranform from view to data without translation
-      const normalizedRangeX = range(this.normalized2pixel.x.domain());
-      const normalizedRangeY = range(this.normalized2pixel.y.domain());
-      const normalizedX = view / viewSizeX * normalizedRangeX;
-      const normalizedY = view / viewSizeY * normalizedRangeY;
-      //const view = this.props.xscale(base)*transform.k - this.props.xscale.range()[0]; //skip translation
-      //debuglog(view, viewSize, transform.k, normalizedSize, normalized);
-      return [normalizedX, normalizedY];
-    };
-
-    const [clickRadiusX, clickRadiusY] = computeClickRadius();
-    return {x: n2pX.invert(canvasPixelPox[0]), y: n2pY.invert(canvasPixelPox[1]), clickRadiusX, clickRadiusY};
   }
 
   protected transformedNormalized2PixelScales() {
@@ -432,8 +382,8 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     };
     setFormat(left, 'y');
     setFormat(bottom, 'x');
-    $parent.select('svg > g').call(left);
-    $parent.select('svg:last-of-type > g').call(bottom);
+    $parent.select(`.${cssprefix}-axis-left > g`).call(left);
+    $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
     $parent.select(`.${cssprefix}-axis-right > g`).call(right);
   }
 
