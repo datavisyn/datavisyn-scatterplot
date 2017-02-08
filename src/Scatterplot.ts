@@ -95,22 +95,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
   }
 
-  protected setDataImpl(data: T[]) {
-    //generate a quad tree out of the data
-    //work on a normalized dimension within the quadtree to
-    // * be independent of the current pixel size
-    // * but still consider the mapping function (linear, pow, log) from the data domain
-    const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
-    const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
-    this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
-  }
-
-  set data(data: T[]) {
-    this.setDataImpl(data);
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
-    this.render(ERenderReason.DIRTY);
-  }
-
   protected transformedScales(): IScalesObject {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
@@ -246,7 +230,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     switch (reason) {
       case ERenderReason.PERFORM_TRANSLATE:
         clearAutoZoomRedraw();
-        transformData(transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
+        this.transformData(c, bounds, boundsWidth, boundsHeight, transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
@@ -278,15 +262,8 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     const left = axisLeft(yscale),
       bottom = axisBottom(xscale),
       $parent = select(this.parent);
-    const setFormat = (axis: Axis<number>, key: string) => {
-      const p = this.baseProps.format[key];
-      if (p == null) {
-        return;
-      }
-      axis.tickFormat(typeof p === 'string' ? format(p) : p);
-    };
-    setFormat(left, 'y');
-    setFormat(bottom, 'x');
+    this.setAxisFormat(left, 'y');
+    this.setAxisFormat(bottom, 'x');
     $parent.select(`.${cssprefix}-axis-left > g`).call(left);
     $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
   }
@@ -309,40 +286,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     //}
 
     //debug stats
-    let rendered = 0, aggregated = 0, hidden = 0;
 
-    function visitTree(node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) {
-      if (!isNodeVisible(x0, y0, x1, y1)) {
-        hidden += debug ? getTreeSize(node) : 0;
-        return ABORT_TRAVERSAL;
-      }
-      if (useAggregation(x0, y0, x1, y1)) {
-        const d = getFirstLeaf(node);
-        //debuglog('aggregate', getTreeSize(node));
-        rendered++;
-        aggregated += debug ? (getTreeSize(node) - 1) : 0;
-        renderer.render(xscale(x(d)), yscale(y(d)), d);
-        return ABORT_TRAVERSAL;
-      }
-      if (isLeafNode(node)) { //is a leaf
-        rendered += forEachLeaf(<QuadtreeLeaf<T>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
-      }
-      return CONTINUE_TRAVERSAL;
-    }
-
-    ctx.save();
-
-    tree.visit(visitTree);
-    renderer.done();
-
-    if (debug) {
-      debuglog('rendered', rendered, 'aggregated', aggregated, 'hidden', hidden, 'total', this.tree.size());
-    }
-
-    //a dummy path to clear the 'to draw' state
-    ctx.beginPath();
-    ctx.closePath();
-
-    ctx.restore();
+    super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug, x, y)
   }
 }

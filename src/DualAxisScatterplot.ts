@@ -169,26 +169,10 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
   }
 
-  protected setDataImpl(data: T[]) {
-    //generate a quad tree out of the data
-    //work on a normalized dimension within the quadtree to
-    // * be independent of the current pixel size
-    // * but still consider the mapping function (linear, pow, log) from the data domain
-    const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
-    const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
-    this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
-  }
-
   private setSecondaryData(secondaryData: T[]) {
     const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
     const domain2normalizedY2 = this.props.y2scale.copy().range(this.normalized2pixel.y2.domain());
     this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x2(d)), (d) => domain2normalizedY2(this.props.y2(d)));
-  }
-
-  set data(data: T[]) {
-    this.setDataImpl(data);
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
-    this.render(ERenderReason.DIRTY);
   }
 
   set secondaryData(secondaryData: T[]) {
@@ -296,31 +280,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
         this.lasso.render(ctx);
       };
 
-    const transformData = (x: number, y: number, kx: number, ky: number) => {
-      //idea copy the data layer to selection layer in a transformed way and swap
-      const ctx = this.canvasSelectionLayer.getContext('2d');
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
-      ctx.clip();
-
-      //ctx.translate(bounds.x0, bounds.y0+bounds_height); //move to visible area
-      //debuglog(x,y,k, bounds.x0, bounds.y0, n2pX(0), n2pY(100), this.currentTransform.x, this.currentTransform.y);
-      //ctx.scale(k,k);
-      //ctx.translate(0, -bounds_height); //move to visible area
-      ctx.translate(x, y);
-      //copy just the visible area
-      //canvas, clip area, target area
-      //see http://www.w3schools.com/tags/canvas_drawimage.asp
-      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, boundsWidth, boundsHeight, bounds.x0, bounds.y0, boundsWidth * kx, boundsHeight * ky);
-      ctx.restore();
-
-      //swap and update class names
-      [this.canvasDataLayer, this.canvasSelectionLayer] = [this.canvasSelectionLayer, this.canvasDataLayer];
-      this.canvasDataLayer.className = `${cssprefix}-data-layer`;
-      this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
-    };
-
     const renderAxes = this.renderAxes.bind(this, xscale, yscale, y2scale);
     const renderData = renderCtx.bind(this, false);
     const renderSecondaryData = renderCtx.bind(this, false, true);
@@ -338,7 +297,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     switch (reason) {
       case ERenderReason.PERFORM_TRANSLATE:
         clearAutoZoomRedraw();
-        transformData(transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
+        this.transformData(c, bounds, boundsWidth, boundsHeight, transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
@@ -373,15 +332,9 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
       bottom = axisBottom(xscale),
       right = axisRight(y2scale),
       $parent = select(this.parent);
-    const setFormat = (axis: Axis<number>, key: string) => {
-      const p = this.baseProps.format[key];
-      if (p == null) {
-        return;
-      }
-      axis.tickFormat(typeof p === 'string' ? format(p) : p);
-    };
-    setFormat(left, 'y');
-    setFormat(bottom, 'x');
+    this.setAxisFormat(left, 'y');
+    this.setAxisFormat(bottom, 'x');
+    this.setAxisFormat(right, 'y');
     $parent.select(`.${cssprefix}-axis-left > g`).call(left);
     $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
     $parent.select(`.${cssprefix}-axis-right > g`).call(right);
@@ -413,42 +366,8 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     //  ctx.beginPath();
     //
     //}
-
     //debug stats
-    let rendered = 0, aggregated = 0, hidden = 0;
 
-    function visitTree(node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) {
-      if (!isNodeVisible(x0, y0, x1, y1)) {
-        hidden += debug ? getTreeSize(node) : 0;
-        return ABORT_TRAVERSAL;
-      }
-      if (useAggregation(x0, y0, x1, y1)) {
-        const d = getFirstLeaf(node);
-        //debuglog('aggregate', getTreeSize(node));
-        rendered++;
-        aggregated += debug ? (getTreeSize(node) - 1) : 0;
-        renderer.render(xscale(x(d)), yscale(y(d)), d);
-        return ABORT_TRAVERSAL;
-      }
-      if (isLeafNode(node)) { //is a leaf
-        rendered += forEachLeaf(<QuadtreeLeaf<T>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
-      }
-      return CONTINUE_TRAVERSAL;
-    }
-
-    ctx.save();
-
-    tree.visit(visitTree);
-    renderer.done();
-
-    if (debug) {
-      debuglog('rendered', rendered, 'aggregated', aggregated, 'hidden', hidden, 'total', this.tree.size());
-    }
-
-    //a dummy path to clear the 'to draw' state
-    ctx.beginPath();
-    ctx.closePath();
-
-    ctx.restore();
+    super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug, x, y);
   }
 }

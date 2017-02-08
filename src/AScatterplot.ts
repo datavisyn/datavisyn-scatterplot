@@ -384,8 +384,6 @@ abstract class AScatterplot<T> extends EventEmitter {
     }
 
     this.parent.classList.add(cssprefix);
-
-
   }
 
   protected initDOM(extraMarkup: string = '') {
@@ -407,6 +405,22 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   get data() {
     return this.tree.data();
+  }
+
+  protected setDataImpl(data: T[]) {
+    //generate a quad tree out of the data
+    //work on a normalized dimension within the quadtree to
+    // * be independent of the current pixel size
+    // * but still consider the mapping function (linear, pow, log) from the data domain
+    const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
+    const domain2normalizedY = this.props.yscale.copy().range(this.normalized2pixel.y.domain());
+    this.tree = quadtree(data, (d) => domain2normalizedX(this.props.x(d)), (d) => domain2normalizedY(this.props.y(d)));
+  }
+
+  set data(data: T[]) {
+    this.setDataImpl(data);
+    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+    this.render(ERenderReason.DIRTY);
   }
 
   protected isSelectAble() {
@@ -762,6 +776,78 @@ abstract class AScatterplot<T> extends EventEmitter {
     clearTimeout(this.showTooltipHandle);
     this.showTooltipHandle = -1;
     this.baseProps.showTooltip(this.parent, [], 0, 0);
+  }
+
+  protected traverseTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, useAggregation: IBoundsPredicate, debug = false, x: IAccessor<T>, y: IAccessor<T>) {
+    //debug stats
+    let rendered = 0, aggregated = 0, hidden = 0;
+
+    function visitTree(node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) {
+      if (!isNodeVisible(x0, y0, x1, y1)) {
+        hidden += debug ? getTreeSize(node) : 0;
+        return ABORT_TRAVERSAL;
+      }
+      if (useAggregation(x0, y0, x1, y1)) {
+        const d = getFirstLeaf(node);
+        //debuglog('aggregate', getTreeSize(node));
+        rendered++;
+        aggregated += debug ? (getTreeSize(node) - 1) : 0;
+        renderer.render(xscale(x(d)), yscale(y(d)), d);
+        return ABORT_TRAVERSAL;
+      }
+      if (isLeafNode(node)) { //is a leaf
+        rendered += forEachLeaf(<QuadtreeLeaf<T>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
+      }
+      return CONTINUE_TRAVERSAL;
+    }
+
+    ctx.save();
+
+    tree.visit(visitTree);
+    renderer.done();
+
+    if (debug) {
+      debuglog('rendered', rendered, 'aggregated', aggregated, 'hidden', hidden, 'total', this.tree.size());
+    }
+
+    //a dummy path to clear the 'to draw' state
+    ctx.beginPath();
+    ctx.closePath();
+
+    ctx.restore();
+  }
+
+  protected setAxisFormat = (axis: Axis<number>, key: string) => {
+    const p = this.baseProps.format[key];
+    if (p == null) {
+      return;
+    }
+    axis.tickFormat(typeof p === 'string' ? format(p) : p);
+  }
+
+  protected transformData(c, bounds, boundsWidth, boundsHeight, x: number, y: number, kx: number, ky: number) {
+    //idea copy the data layer to selection layer in a transformed way and swap
+    const ctx = this.canvasSelectionLayer.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.save();
+    ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
+    ctx.clip();
+
+    //ctx.translate(bounds.x0, bounds.y0+bounds_height); //move to visible area
+    //debuglog(x,y,k, bounds.x0, bounds.y0, n2pX(0), n2pY(100), this.currentTransform.x, this.currentTransform.y);
+    //ctx.scale(k,k);
+    //ctx.translate(0, -bounds_height); //move to visible area
+    ctx.translate(x, y);
+    //copy just the visible area
+    //canvas, clip area, target area
+    //see http://www.w3schools.com/tags/canvas_drawimage.asp
+    ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, boundsWidth, boundsHeight, bounds.x0, bounds.y0, boundsWidth * kx, boundsHeight * ky);
+    ctx.restore();
+
+    //swap and update class names
+    [this.canvasDataLayer, this.canvasSelectionLayer] = [this.canvasSelectionLayer, this.canvasDataLayer];
+    this.canvasDataLayer.className = `${cssprefix}-data-layer`;
+    this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
   }
 
   protected abstract normalized2pixel;
