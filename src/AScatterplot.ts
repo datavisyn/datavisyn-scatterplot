@@ -44,8 +44,8 @@ export interface IScale extends AxisScale<number>, ZoomScale {
 }
 
 export interface IScalesObject {
-  xscale: IScale;
-  yscale: IScale;
+  x: IScale;
+  y: IScale;
 }
 
 export interface IAccessor<T> {
@@ -661,7 +661,7 @@ abstract class AScatterplot<T> extends EventEmitter {
    * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
    */
   get window(): IWindow {
-    const {xscale, yscale} = this.transformedScales();
+    const { x: xscale, y: yscale} = this.transformedScales();
     return {
       xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
       yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))

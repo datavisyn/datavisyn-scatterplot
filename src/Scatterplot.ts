@@ -77,7 +77,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   protected transformedScales(): IScalesObject {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
-    return {xscale, yscale};
+    return { x: xscale, y: yscale};
   }
 
   protected transformedNormalized2PixelScales() {
@@ -109,7 +109,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     }
 
     //transform scale
-    const {xscale, yscale} = this.transformedScales();
+    const { x: xscale, y:  yscale} = this.transformedScales();
 
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     const nx = (v) => n2pX.invert(v),

@@ -26,7 +26,7 @@ import AScatterplot, {
 } from './AScatterplot';
 
 export interface IScalesObjectDualAxis extends IScalesObject {
-  y2scale: IScale;
+  y2: IScale;
 }
 
 /**
@@ -106,7 +106,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
   };
 
 
-  protected readonly normalized2pixel = {
+  protected readonly normalized2pixel: IScalesObjectDualAxis = {
     x: scaleLinear(),
     y: scaleLinear(),
     y2: scaleLinear()
@@ -164,7 +164,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
-    return {xscale, yscale, y2scale};
+    return { x: xscale, y: yscale, y2: y2scale};
   }
 
   protected transformedNormalized2PixelScales() {
@@ -199,7 +199,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     }
 
     //transform scale
-    const {xscale, yscale, y2scale} = this.transformedScales();
+    const { x: xscale, y: yscale, y2: y2scale} = this.transformedScales();
 
     const {n2pX, n2pY, n2pY2} = this.transformedNormalized2PixelScales();
 
