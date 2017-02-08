@@ -35,6 +35,7 @@ import {line} from 'd3-shape';
 import AScatterplot, {
   fixScale,
   IScale,
+  IScatterplotOptions,
   IScalesObject,
   IAccessor,
   EScaleAxes,
@@ -52,35 +53,7 @@ export interface IScalesObjectDualAxis extends IScalesObject {
 /**
  * scatterplot options
  */
-export interface IScatterplotOptions<T> {
-  /**
-   * margin for the scatterplot area
-   * default (left=40, top=10, right=10, bottom=20)
-   */
-  margin?: {
-    left?: number;
-    top?: number;
-    right?: number;
-    bottom?: number;
-  };
-
-  zoom?: IZoomOptions;
-
-  format?: IFormatOptions;
-
-  /**
-   * x accessor of the data
-   * default: d.x
-   * @param d
-   */
-  x?: IAccessor<T>;
-
-  /**
-   * y accessor of the data
-   * default: d.y
-   * @param d
-   */
-  y?: IAccessor<T>;
+export interface IScatterplotOptionsDualAxis<T> extends IScatterplotOptions<T> {
 
   /**
    * x2 accessor of the secondary data
@@ -97,39 +70,10 @@ export interface IScatterplotOptions<T> {
   y2?: IAccessor<T>;
 
   /**
-   * x axis label
-   * default: x
-   */
-  xlabel?: string;
-
-  /**
-   * y axis label
-   * default: x
-   */
-  ylabel?: string;
-
-  /**
    * y axis label
    * default: x
    */
   y2label?: string;
-
-  /**
-   * d3 x scale
-   * default: linear scale with a domain from 0...100
-   */
-  xscale?: IScale;
-
-  /**
-   * instead of specifying the scale just the x limits
-   */
-  xlim?: [number, number];
-
-  /**
-   * d3 y scale
-   * default: linear scale with a domain from 0...100
-   */
-  yscale?: IScale;
 
   /**
    * d3 y2 scale
@@ -140,107 +84,30 @@ export interface IScatterplotOptions<T> {
   /**
    * instead of specifying the scale just the y limits
    */
-  ylim?: [number, number];
-
-  /**
-   * instead of specifying the scale just the y limits
-   */
   y2lim?: [number, number];
-
-  /**
-   * symbol used to render a data point of the primary dataset
-   * default: steelblue circle
-   */
-  symbol?: ISymbol<T>|string;
 
   /**
    * renderer used to render secondary dataset
    * default: steelblue circle
    */
   symbol2?: ISymbol<T>|string;
-
-  /**
-   * the radius in pixel in which a mouse click will be searched
-   * default: 10
-   */
-  clickRadius?: number;
-
-  /**
-   * delay before a tooltip will be shown after a mouse was moved
-   * default: 500
-   */
-  tooltipDelay?: number;
-
-  /**
-   * shows the tooltip
-   * default: simple popup similar to bootstrap
-   * if `null` or `false` tooltips are disabled
-   * @param parent the scatterplot html element
-   * @param items items to show, empty to hide tooltip
-   * @param x the x position relative to the plot
-   * @param y the y position relative to the plot
-   */
-  showTooltip?(parent: HTMLElement, items: T[], x: number, y: number);
-
-  /**
-   * determines whether the given mouse is a selection or panning event, if `null` or `false` selection is disabled
-   * default: event.ctrlKey || event.altKey
-   *
-   */
-  isSelectEvent?(event: MouseEvent): boolean; //=> event.ctrlKey || event.altKey
-
-  /**
-   * lasso options
-   */
-  lasso?: ILassoOptions & {
-    /**
-     * lasso update frequency to improve performance
-     */
-    interval?: number
-  };
-
-  /**
-   * additional render elements, e.g. lines
-   * @param ctx
-   * @param xscale
-   * @param yscale
-   */
-  extras?(ctx: CanvasRenderingContext2D, xscale: IScale, yscale: IScale);
-
-  /**
-   * optional hint for the scatterplot in which aspect ratio it will be rendered. This is useful for improving the selection and interaction in non 1:1 aspect ratios
-   */
-  aspectRatio?: number;
 }
 
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
+
+const customBaseProps = {
+  margin: {
+    right: 50
+  }
+}
 
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
 export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
-  private props: IScatterplotOptions<T> = {
-    margin: {
-      left: 48,
-      top: 10,
-      bottom: 32,
-      right: 50
-    },
-    clickRadius: 10,
-
-    zoom: {
-      scale: EScaleAxes.xy,
-      delay: 300,
-      scaleExtent: [1, +Infinity],
-      window: null,
-      scaleTo: 1,
-      translateBy: [0, 0],
-    },
-
-    format: {},
-
+  private props: IScatterplotOptionsDualAxis<T> = {
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -257,20 +124,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
     symbol: 'o',
     symbol2: 'o',
-
-    tooltipDelay: 500,
-
-    showTooltip,
-
-    isSelectEvent: (event: MouseEvent) => event.ctrlKey || event.altKey,
-
-    lasso: {
-      interval: 100
-    },
-
-    extras: null,
-
-    aspectRatio: 1
   };
 
 
@@ -286,8 +139,8 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
   private readonly renderer: ISymbol<T>;
   private readonly secondaryRenderer: ISymbol<T>;
 
-  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
-    super(data, root);
+  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptionsDualAxis<T>) {
+    super(data, root, customBaseProps);
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
@@ -297,7 +150,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.secondaryRenderer = createRenderer(this.props.symbol2);
 
     // generate aspect ratio right normalized domain
-    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
+    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.baseProps.aspectRatio));
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
     this.normalized2pixel.y2.domain(DEFAULT_NORMALIZED_RANGE);
 
@@ -310,18 +163,18 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
-      <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
-        <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
+      <svg class="${cssprefix}-axis-left" style="width: ${this.baseProps.margin.left + 2}px;">
+        <g transform="translate(${this.baseProps.margin.left},${this.baseProps.margin.top})"><g>
       </svg>
-      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
-      <svg class="${cssprefix}-axis-right" style="width: ${this.props.margin.left + 2}px; right: 0">
-        <g transform="translate(0,${this.props.margin.top})"><g>
+      <div class="${cssprefix}-axis-left-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px"><div>${this.props.ylabel}</div></div>
+      <svg class="${cssprefix}-axis-right" style="width: ${this.baseProps.margin.left + 2}px; right: 0">
+        <g transform="translate(0,${this.baseProps.margin.top})"><g>
       </svg>
-      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
-      <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
-        <g transform="translate(${this.props.margin.left},0)"><g>
+      <div class="${cssprefix}-axis-right-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
+      <svg class="${cssprefix}-axis-bottom" style="height: ${this.baseProps.margin.bottom}px;">
+        <g transform="translate(${this.baseProps.margin.left},0)"><g>
       </svg>
-      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
+      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.baseProps.margin.left + 2}px; right: ${this.baseProps.margin.right}px"><div>${this.props.xlabel}</div></div>
     `;
     this.parent.classList.add(cssprefix);
 
@@ -379,9 +232,9 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
     const computeClickRadius = () => {
       //compute the data domain radius based on xscale and the scaling factor
-      const view = this.props.clickRadius;
+      const view = this.baseProps.clickRadius;
       const transform = this.currentTransform;
-      const scale = this.props.zoom.scale;
+      const scale = this.baseProps.zoom.scale;
       const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
       const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
       const viewSizeX = kX * range(this.normalized2pixel.x.range());
@@ -424,7 +277,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     }
 
     const c = this.canvasDataLayer,
-      margin = this.props.margin,
+      margin = this.baseProps.margin,
       bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
       boundsWidth = bounds.x1 - bounds.x0,
       boundsHeight = bounds.y1 - bounds.y0;
@@ -480,7 +333,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
-        this.props.extras(ctx, xscale, yscale);
+        this.baseProps.extras(ctx, xscale, yscale);
         ctx.restore();
       }
 
@@ -539,7 +392,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.baseProps.zoom.delay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
@@ -571,7 +424,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
       right = axisRight(y2scale),
       $parent = select(this.parent);
     const setFormat = (axis: Axis<number>, key: string) => {
-      const p = this.props.format[key];
+      const p = this.baseProps.format[key];
       if (p == null) {
         return;
       }

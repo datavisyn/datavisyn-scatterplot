@@ -101,26 +101,6 @@ export interface IFormatOptions {
 
 // TODO: split baseProps and childProps to two different types
 export interface IScatterplotOptions<T> {
-  /**
-   * margin for the scatterplot area
-   * default (left=40, top=10, right=10, bottom=20)
-   */
-  margin?: {
-    left?: number;
-    top?: number;
-    right?: number;
-    bottom?: number;
-  };
-
-  zoom?: IZoomOptions;
-
-  format?: IFormatOptions;
-
-  /**
-   * x accessor of the data
-   * default: d.x
-   * @param d
-   */
   x?: IAccessor<T>;
 
   /**
@@ -169,6 +149,55 @@ export interface IScatterplotOptions<T> {
    * default: steelblue circle
    */
   symbol?: ISymbol<T>|string;
+}
+
+/**
+ * reasons why a new render pass is needed
+ */
+export enum ERenderReason {
+  DIRTY,
+  SELECTION_CHANGED,
+  ZOOMED,
+  PERFORM_SCALE_AND_TRANSLATE,
+  AFTER_SCALE_AND_TRANSLATE,
+  PERFORM_TRANSLATE,
+  AFTER_TRANSLATE,
+  PERFORM_SCALE,
+  AFTER_SCALE
+}
+
+
+export declare type IMinMax = [number, number];
+
+/**
+ * visible window
+ */
+export interface IWindow {
+  xMinMax: IMinMax;
+  yMinMax: IMinMax;
+}
+
+export interface IScatterplotBaseOptions<T> {
+  /**
+   * margin for the scatterplot area
+   * default (left=40, top=10, right=10, bottom=20)
+   */
+  margin?: {
+    left?: number;
+    top?: number;
+    right?: number;
+    bottom?: number;
+  };
+
+  zoom?: IZoomOptions;
+
+  format?: IFormatOptions;
+
+  /**
+   * x accessor of the data
+   * default: d.x
+   * @param d
+   */
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -224,32 +253,6 @@ export interface IScatterplotOptions<T> {
   aspectRatio?: number;
 }
 
-/**
- * reasons why a new render pass is needed
- */
-export enum ERenderReason {
-  DIRTY,
-  SELECTION_CHANGED,
-  ZOOMED,
-  PERFORM_SCALE_AND_TRANSLATE,
-  AFTER_SCALE_AND_TRANSLATE,
-  PERFORM_TRANSLATE,
-  AFTER_TRANSLATE,
-  PERFORM_SCALE,
-  AFTER_SCALE
-}
-
-
-export declare type IMinMax = [number, number];
-
-/**
- * visible window
- */
-export interface IWindow {
-  xMinMax: IMinMax;
-  yMinMax: IMinMax;
-}
-
 export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
   if (given) {
     return given;
@@ -278,7 +281,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   // TODO: use childProps type
   private childProps;
-  protected baseProps: IScatterplotOptions<T> = {
+  protected baseProps: IScatterplotBaseOptions<T> = {
     margin: {
       left: 48,
       top: 10,
@@ -336,8 +339,10 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected readonly parent: HTMLElement;
 
-  constructor(data: T[], root: HTMLElement, childProps?) {
+  constructor(data: T[], root: HTMLElement, baseProps?: IScatterplotBaseOptions<T>, childProps?: IScatterplotOptions<T>) {
     super();
+
+    this.baseProps = merge(this.baseProps, baseProps);
 
     this.parent = root.ownerDocument.createElement('div');
 
