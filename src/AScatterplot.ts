@@ -364,6 +364,20 @@ abstract class AScatterplot<T> extends EventEmitter {
         this.zoomBehavior.translateBy($parent, zoom.translateBy[0], zoom.translateBy[1]);
       }
     }
+
+    if (this.isSelectAble()) {
+      const drag = d3drag()
+        .on('start', this.onDragStart.bind(this))
+        .on('drag', this.onDrag.bind(this))
+        .on('end', this.onDragEnd.bind(this))
+        .filter(() => d3event.button === 0 && this.baseProps.isSelectEvent(<MouseEvent>d3event));
+      $parent.call(drag)
+        .on('click', () => this.onClick(d3event));
+    }
+    if (this.hasTooltips()) {
+      $parent.on('mouseleave', () => this.onMouseLeave(d3event))
+        .on('mousemove', () => this.onMouseMove(d3event));
+    }
   }
 
   protected isSelectAble() {
@@ -376,6 +390,10 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected hasTooltips() {
     return this.baseProps.showTooltip != null && (<any>this.baseProps.showTooltip) !== false;
+  }
+
+  protected resized() {
+    this.render(ERenderReason.DIRTY);
   }
 
   /**
@@ -566,11 +584,11 @@ abstract class AScatterplot<T> extends EventEmitter {
     };
   }
 
-  protected onZoomStart() {
+  private onZoomStart() {
     this.zoomStartTransform = this.currentTransform;
   }
 
-  protected onZoom() {
+  private onZoom() {
     const evt = <D3ZoomEvent<any,any>>d3event;
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
@@ -597,7 +615,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     //nothing if no changed
   }
 
-  protected onZoomEnd() {
+  private onZoomEnd() {
     const start = this.zoomStartTransform;
     const end = this.currentTransform;
     const tchanged = (start.x !== end.x || start.y !== end.y);
@@ -611,10 +629,89 @@ abstract class AScatterplot<T> extends EventEmitter {
     }
   }
 
+  private onDragStart() {
+    this.lasso.start(d3event.x, d3event.y);
+    if (!this.clearSelection()) {
+      this.render(ERenderReason.SELECTION_CHANGED);
+    }
+  }
+
+  private onDrag() {
+    if (this.dragHandle < 0) {
+      this.dragHandle = setInterval(this.updateDrag.bind(this), this.baseProps.lasso.interval);
+    }
+    this.lasso.setCurrent(d3event.x, d3event.y);
+    this.render(ERenderReason.SELECTION_CHANGED);
+  }
+
+  private updateDrag() {
+    if (this.lasso.pushCurrent()) {
+      this.retestLasso();
+    }
+  }
+
+  private onDragEnd() {
+    clearInterval(this.dragHandle);
+    this.dragHandle = -1;
+
+    this.lasso.end(d3event.x, d3event.y);
+    if (!this.retestLasso()) {
+      this.render(ERenderReason.SELECTION_CHANGED);
+    }
+    this.lasso.clear();
+  }
+
+  private retestLasso() {
+    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
+    // shift by the margin since the scales doesn't include them for better scaling experience
+    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.baseProps.margin.left, -this.baseProps.margin.top);
+    return tester && this.selectWithTester(tester);
+  }
+
+  private onClick(event: MouseEvent) {
+    if (event.button > 0) {
+      //right button or something like that = reset
+      this.selection = [];
+      return;
+    }
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
+    //find closest data item
+    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    this.selectWithTester(tester);
+  }
+
+  private showTooltip(canvasPos: [number, number]) {
+    //highlight selected item
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
+    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    const items = findByTester(this.tree, tester);
+    // canvas pos doesn't include the margin
+    this.baseProps.showTooltip(this.parent, items, canvasPos[0] +  this.baseProps.margin.left, canvasPos[1] + this.baseProps.margin.top);
+    this.showTooltipHandle = -1;
+  }
+
+  private onMouseMove(event: MouseEvent) {
+    if (this.showTooltipHandle >= 0) {
+      this.onMouseLeave(event);
+    }
+    const pos = this.mousePosAtCanvas();
+    //TODO find a more efficient way or optimize the timing
+    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.baseProps.tooltipDelay);
+  }
+
+  private onMouseLeave(event: MouseEvent) {
+    clearTimeout(this.showTooltipHandle);
+    this.showTooltipHandle = -1;
+    this.baseProps.showTooltip(this.parent, [], 0, 0);
+  }
+
+
+
+
+  protected abstract getMouseNormalizedPos(canvasPixelPos?);
+  protected abstract transformedNormalized2PixelScales();
   protected abstract transformedScales();
   protected abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
-
-
 }
 
 export default AScatterplot;

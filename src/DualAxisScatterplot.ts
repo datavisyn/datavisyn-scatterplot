@@ -330,20 +330,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
-
-    if (this.isSelectAble()) {
-      const drag = d3drag()
-        .on('start', this.onDragStart.bind(this))
-        .on('drag', this.onDrag.bind(this))
-        .on('end', this.onDragEnd.bind(this))
-        .filter(() => d3event.button === 0 && this.props.isSelectEvent(<MouseEvent>d3event));
-      $parent.call(drag)
-        .on('click', () => this.onClick(d3event));
-    }
-    if (this.hasTooltips()) {
-      $parent.on('mouseleave', () => this.onMouseLeave(d3event))
-        .on('mousemove', () => this.onMouseMove(d3event));
-    }
   }
 
   get data() {
@@ -377,11 +363,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-
-  resized() {
-    this.render(ERenderReason.DIRTY);
-  }
-
   protected transformedScales(): IScalesObjectDualAxis {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
@@ -389,7 +370,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     return {xscale, yscale, y2scale};
   }
 
-  private getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
+  protected getMouseNormalizedPos(canvasPixelPox = this.mousePosAtCanvas()) {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
     function range(range: number[]) {
@@ -419,7 +400,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     return {x: n2pX.invert(canvasPixelPox[0]), y: n2pY.invert(canvasPixelPox[1]), clickRadiusX, clickRadiusY};
   }
 
-  private transformedNormalized2PixelScales() {
+  protected transformedNormalized2PixelScales() {
     const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
     const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
     return {n2pX, n2pY};
@@ -434,82 +415,6 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
       xMinMax: <IMinMax>this.props.xscale.domain(),
       yMinMax: <IMinMax>this.props.yscale.domain(),
     };
-  }
-
-  private onDragStart() {
-    this.lasso.start(d3event.x, d3event.y);
-    if (!this.clearSelection()) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-  }
-
-  private onDrag() {
-    if (this.dragHandle < 0) {
-      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
-    }
-    this.lasso.setCurrent(d3event.x, d3event.y);
-    this.render(ERenderReason.SELECTION_CHANGED);
-  }
-
-  private updateDrag() {
-    if (this.lasso.pushCurrent()) {
-      this.retestLasso();
-    }
-  }
-
-  private retestLasso() {
-    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
-    // shift by the margin since the scales doesn't include them for better scaling experience
-    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.margin.left, -this.props.margin.top);
-    return tester && this.selectWithTester(tester);
-  }
-
-  private onDragEnd() {
-    clearInterval(this.dragHandle);
-    this.dragHandle = -1;
-
-    this.lasso.end(d3event.x, d3event.y);
-    if (!this.retestLasso()) {
-      this.render(ERenderReason.SELECTION_CHANGED);
-    }
-    this.lasso.clear();
-  }
-
-  private onClick(event: MouseEvent) {
-    if (event.button > 0) {
-      //right button or something like that = reset
-      this.selection = [];
-      return;
-    }
-    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
-    //find closest data item
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
-    this.selectWithTester(tester);
-  }
-
-  private showTooltip(canvasPos: [number, number]) {
-    //highlight selected item
-    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
-    const items = findByTester(this.tree, tester);
-    // canvas pos doesn't include the margin
-    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top);
-    this.showTooltipHandle = -1;
-  }
-
-  private onMouseMove(event: MouseEvent) {
-    if (this.showTooltipHandle >= 0) {
-      this.onMouseLeave(event);
-    }
-    const pos = this.mousePosAtCanvas();
-    //TODO find a more efficient way or optimize the timing
-    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.props.tooltipDelay);
-  }
-
-  private onMouseLeave(event: MouseEvent) {
-    clearTimeout(this.showTooltipHandle);
-    this.showTooltipHandle = -1;
-    this.props.showTooltip(this.parent, [], 0, 0);
   }
 
   protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
