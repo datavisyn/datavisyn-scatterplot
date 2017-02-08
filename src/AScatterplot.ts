@@ -778,16 +778,18 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.baseProps.showTooltip(this.parent, [], 0, 0);
   }
 
-  protected traverseTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, useAggregation: IBoundsPredicate, debug = false, x: IAccessor<T>, y: IAccessor<T>) {
+  protected traverseTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false, x: IAccessor<T>, y: IAccessor<T>) {
     //debug stats
     let rendered = 0, aggregated = 0, hidden = 0;
 
-    function visitTree(node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) {
+    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
+
+    const visitTree = (node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) => {
       if (!isNodeVisible(x0, y0, x1, y1)) {
         hidden += debug ? getTreeSize(node) : 0;
         return ABORT_TRAVERSAL;
       }
-      if (useAggregation(x0, y0, x1, y1)) {
+      if (this.useAggregation(n2pX, n2pY, x0, y0, x1, y1)) {
         const d = getFirstLeaf(node);
         //debuglog('aggregate', getTreeSize(node));
         rendered++;
@@ -799,7 +801,7 @@ abstract class AScatterplot<T> extends EventEmitter {
         rendered += forEachLeaf(<QuadtreeLeaf<T>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
       }
       return CONTINUE_TRAVERSAL;
-    }
+    };
 
     ctx.save();
 
@@ -850,9 +852,23 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
   }
 
+  protected transformedNormalized2PixelScales() {
+    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
+    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
+    return {n2pX, n2pY};
+  }
+
+  private useAggregation(n2pX, n2pY, x0: number, y0: number, x1: number, y1: number) {
+    x0 = n2pX(x0);
+    y0 = n2pY(y0);
+    x1 = n2pX(x1);
+    y1 = n2pY(y1);
+    const minSize = Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
+    return minSize < 5; //TODO tune depend on visual impact
+  }
+
   protected abstract normalized2pixel;
   protected abstract props: IScatterplotOptions<T>;
-  protected abstract transformedNormalized2PixelScales();
   protected abstract transformedScales();
   protected abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
 }

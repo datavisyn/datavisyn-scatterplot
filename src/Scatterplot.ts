@@ -100,13 +100,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return {xscale, yscale};
   }
-
-  protected transformedNormalized2PixelScales() {
-    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
-    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
-    return {n2pX, n2pY};
-  }
-
   /**
    * returns the total domain
    * @returns {{xMinMax: number[], yMinMax: number[]}}
@@ -149,15 +142,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     //inverted y scale
     const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
 
-    function useAggregation(x0: number, y0: number, x1: number, y1: number) {
-      x0 = n2pX(x0);
-      y0 = n2pY(y0);
-      x1 = n2pX(x1);
-      y1 = n2pY(y1);
-      const minSize = Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
-      return minSize < 5; //TODO tune depend on visual impact
-    }
-
     const renderInfo = {
       zoomLevel: this.currentTransform.k
     };
@@ -172,7 +156,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       const renderer = this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
-      this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug);
+      this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug);
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
@@ -188,31 +172,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
         const ctx = renderCtx(true);
         this.lasso.render(ctx);
       };
-
-    const transformData = (x: number, y: number, kx: number, ky: number) => {
-      //idea copy the data layer to selection layer in a transformed way and swap
-      const ctx = this.canvasSelectionLayer.getContext('2d');
-      ctx.clearRect(0, 0, c.width, c.height);
-      ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
-      ctx.clip();
-
-      //ctx.translate(bounds.x0, bounds.y0+bounds_height); //move to visible area
-      //debuglog(x,y,k, bounds.x0, bounds.y0, n2pX(0), n2pY(100), this.currentTransform.x, this.currentTransform.y);
-      //ctx.scale(k,k);
-      //ctx.translate(0, -bounds_height); //move to visible area
-      ctx.translate(x, y);
-      //copy just the visible area
-      //canvas, clip area, target area
-      //see http://www.w3schools.com/tags/canvas_drawimage.asp
-      ctx.drawImage(this.canvasDataLayer, bounds.x0, bounds.y0, boundsWidth, boundsHeight, bounds.x0, bounds.y0, boundsWidth * kx, boundsHeight * ky);
-      ctx.restore();
-
-      //swap and update class names
-      [this.canvasDataLayer, this.canvasSelectionLayer] = [this.canvasSelectionLayer, this.canvasDataLayer];
-      this.canvasDataLayer.className = `${cssprefix}-data-layer`;
-      this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
-    };
 
     const renderAxes = this.renderAxes.bind(this, xscale, yscale);
     const renderData = renderCtx.bind(this, false);
@@ -268,7 +227,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
   }
 
-  private renderTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, useAggregation: IBoundsPredicate, debug = false) {
+  private renderTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false) {
     const {x, y} = this.props;
 
     //function debugNode(color:string, x0:number, y0:number, x1:number, y1:number) {
@@ -287,6 +246,6 @@ export default class Scatterplot<T> extends AScatterplot<T> {
 
     //debug stats
 
-    super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, useAggregation, debug, x, y)
+    super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug, x, y);
   }
 }
