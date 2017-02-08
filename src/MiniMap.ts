@@ -2,12 +2,13 @@
  * Created by sam on 19.12.2016.
  */
 
-import Scatterplot, {EScaleAxes, IWindow, IMinMax} from './Scatterplot';
+import Scatterplot from './Scatterplot';
 import {select, event as d3event} from 'd3-selection';
 import {scaleLinear} from 'd3-scale';
 import {brushX, brushY, brush, D3BrushEvent, BrushBehavior} from 'd3-brush';
 import merge from './merge';
 import {cssprefix} from './constants';
+import {EScaleAxes, IMinMax, IWindow} from './AScatterplot';
 
 export interface IMiniMapOptions {
   scale?: EScaleAxes;
