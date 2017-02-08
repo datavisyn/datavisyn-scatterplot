@@ -4,46 +4,24 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import {axisLeft, axisBottom, AxisScale, Axis} from 'd3-axis';
-import {extent} from 'd3-array';
-import {format} from 'd3-format';
+import {axisLeft, axisBottom} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
-import {select, mouse, event as d3event} from 'd3-selection';
-import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
-import {drag as d3drag} from 'd3-drag';
-import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
-import {circleSymbol, ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
+import {select} from 'd3-selection';
+import {quadtree, Quadtree} from 'd3-quadtree';
+import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
 import merge from './merge';
 import {
-  forEachLeaf,
-  ellipseTester,
-  isLeafNode,
   hasOverlap,
-  getTreeSize,
-  findByTester,
-  getFirstLeaf,
-  ABORT_TRAVERSAL,
-  CONTINUE_TRAVERSAL,
   IBoundsPredicate,
-  ITester
 } from './quadtree';
-import Lasso, {ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
-import showTooltip from './tooltip';
-import {EventEmitter} from 'eventemitter3';
-import {line} from 'd3-shape';
 import AScatterplot, {
   fixScale,
   IScale,
   IScatterplotOptions,
   IScalesObject,
-  IAccessor,
   EScaleAxes,
-  IZoomOptions,
-  IFormatOptions,
   ERenderReason,
-  IMinMax,
-  IWindow
 } from './AScatterplot';
 
 //normalized range the quadtree is defined
@@ -87,6 +65,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
 
     this.setDataImpl(data);
+
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.initDOM();
@@ -100,15 +79,11 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return {xscale, yscale};
   }
-  /**
-   * returns the total domain
-   * @returns {{xMinMax: number[], yMinMax: number[]}}
-   */
-  get domain(): IWindow {
-    return {
-      xMinMax: <IMinMax>this.props.xscale.domain(),
-      yMinMax: <IMinMax>this.props.yscale.domain(),
-    };
+
+  protected transformedNormalized2PixelScales() {
+    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
+    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
+    return {n2pX, n2pY};
   }
 
   protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {

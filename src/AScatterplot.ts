@@ -423,6 +423,17 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.render(ERenderReason.DIRTY);
   }
 
+  /**
+   * returns the total domain
+   * @returns {{xMinMax: number[], yMinMax: number[]}}
+   */
+  get domain(): IWindow {
+    return {
+      xMinMax: <IMinMax>this.props.xscale.domain(),
+      yMinMax: <IMinMax>this.props.yscale.domain(),
+    };
+  }
+
   protected isSelectAble() {
     return this.baseProps.isSelectEvent != null && (<any>this.baseProps.isSelectEvent) !== false;
   }
@@ -852,12 +863,6 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.canvasSelectionLayer.className = `${cssprefix}-selection-layer`;
   }
 
-  protected transformedNormalized2PixelScales() {
-    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
-    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
-    return {n2pX, n2pY};
-  }
-
   private useAggregation(n2pX, n2pY, x0: number, y0: number, x1: number, y1: number) {
     x0 = n2pX(x0);
     y0 = n2pY(y0);
@@ -869,6 +874,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected abstract normalized2pixel;
   protected abstract props: IScatterplotOptions<T>;
+  protected abstract transformedNormalized2PixelScales();
   protected abstract transformedScales();
   protected abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
 }

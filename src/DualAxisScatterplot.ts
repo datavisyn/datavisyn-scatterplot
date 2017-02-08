@@ -5,33 +5,16 @@
  */
 
 import {axisLeft, axisBottom, axisRight, AxisScale, Axis} from 'd3-axis';
-import {extent} from 'd3-array';
-import {format} from 'd3-format';
 import {scaleLinear} from 'd3-scale';
-import {select, mouse, event as d3event} from 'd3-selection';
-import {zoom as d3zoom, ZoomScale, ZoomTransform, D3ZoomEvent, zoomIdentity, ZoomBehavior} from 'd3-zoom';
-import {drag as d3drag} from 'd3-drag';
-import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
-import {circleSymbol, lineRenderer, ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
+import {select} from 'd3-selection';
+import {quadtree, Quadtree} from 'd3-quadtree';
+import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
 import merge from './merge';
 import {
-  forEachLeaf,
-  ellipseTester,
-  isLeafNode,
   hasOverlap,
-  getTreeSize,
-  findByTester,
-  getFirstLeaf,
-  ABORT_TRAVERSAL,
-  CONTINUE_TRAVERSAL,
-  IBoundsPredicate,
-  ITester
+  IBoundsPredicate
 } from './quadtree';
-import Lasso, {ILassoOptions} from './lasso';
 import {cssprefix, DEBUG, debuglog} from './constants';
-import showTooltip from './tooltip';
-import {EventEmitter} from 'eventemitter3';
-import {line} from 'd3-shape';
 import AScatterplot, {
   fixScale,
   IScale,
@@ -39,11 +22,7 @@ import AScatterplot, {
   IScalesObject,
   IAccessor,
   EScaleAxes,
-  IZoomOptions,
-  IFormatOptions,
   ERenderReason,
-  IMinMax,
-  IWindow
 } from './AScatterplot';
 
 export interface IScalesObjectDualAxis extends IScalesObject {
@@ -156,6 +135,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
     this.setDataImpl(data);
     this.setSecondaryData(secondaryData);
+
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.initDOM(`
@@ -187,15 +167,11 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     return {xscale, yscale, y2scale};
   }
 
-  /**
-   * returns the total domain
-   * @returns {{xMinMax: number[], yMinMax: number[]}}
-   */
-  get domain(): IWindow {
-    return {
-      xMinMax: <IMinMax>this.props.xscale.domain(),
-      yMinMax: <IMinMax>this.props.yscale.domain(),
-    };
+  protected transformedNormalized2PixelScales() {
+    const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
+    const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
+    const n2pY2 = this.rescale(EScaleAxes.y, this.normalized2pixel.y2);
+    return {n2pX, n2pY, n2pY2};
   }
 
   protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
@@ -225,11 +201,14 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     //transform scale
     const {xscale, yscale, y2scale} = this.transformedScales();
 
-    const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
+    const {n2pX, n2pY, n2pY2} = this.transformedNormalized2PixelScales();
+
     const nx = (v) => n2pX.invert(v),
-      ny = (v) => n2pY.invert(v);
+      ny = (v) => n2pY.invert(v),
+      ny2 = (v) => n2pY2.invert(v);
     //inverted y scale
     const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
+    const isNodeVisible2 = hasOverlap(nx(0), ny2(boundsHeight), nx(boundsWidth), ny2(0));
 
     const renderInfo = {
       zoomLevel: this.currentTransform.k
@@ -248,7 +227,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
 
-      this.renderTree(ctx, tree, renderer, xscale, isSecondary? y2scale : yscale, isNodeVisible, isSecondary, debug);
+      this.renderTree(ctx, tree, renderer, xscale, isSecondary? y2scale : yscale, isSecondary? isNodeVisible2 : isNodeVisible, isSecondary, debug);
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
