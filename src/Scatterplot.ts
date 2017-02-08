@@ -45,7 +45,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   };
 
 
-  protected readonly normalized2pixel = {
+  protected readonly normalized2pixel: IScalesObject = {
     x: scaleLinear(),
     y: scaleLinear()
   };
