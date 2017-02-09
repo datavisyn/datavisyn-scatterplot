@@ -100,6 +100,26 @@ export interface IFormatOptions {
  */
 
 export interface IScatterplotOptions<T> {
+  /**
+   * margin for the scatterplot area
+   * default (left=40, top=10, right=10, bottom=20)
+   */
+  margin?: {
+    left?: number;
+    top?: number;
+    right?: number;
+    bottom?: number;
+  };
+
+  zoom?: IZoomOptions;
+
+  format?: IFormatOptions;
+
+  /**
+   * x accessor of the data
+   * default: d.x
+   * @param d
+   */
   x?: IAccessor<T>;
 
   /**
@@ -148,55 +168,6 @@ export interface IScatterplotOptions<T> {
    * default: steelblue circle
    */
   symbol?: ISymbol<T>|string;
-}
-
-/**
- * reasons why a new render pass is needed
- */
-export enum ERenderReason {
-  DIRTY,
-  SELECTION_CHANGED,
-  ZOOMED,
-  PERFORM_SCALE_AND_TRANSLATE,
-  AFTER_SCALE_AND_TRANSLATE,
-  PERFORM_TRANSLATE,
-  AFTER_TRANSLATE,
-  PERFORM_SCALE,
-  AFTER_SCALE
-}
-
-
-export declare type IMinMax = [number, number];
-
-/**
- * visible window
- */
-export interface IWindow {
-  xMinMax: IMinMax;
-  yMinMax: IMinMax;
-}
-
-export interface IScatterplotBaseOptions<T> {
-  /**
-   * margin for the scatterplot area
-   * default (left=40, top=10, right=10, bottom=20)
-   */
-  margin?: {
-    left?: number;
-    top?: number;
-    right?: number;
-    bottom?: number;
-  };
-
-  zoom?: IZoomOptions;
-
-  format?: IFormatOptions;
-
-  /**
-   * x accessor of the data
-   * default: d.x
-   * @param d
-   */
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -252,6 +223,32 @@ export interface IScatterplotBaseOptions<T> {
   aspectRatio?: number;
 }
 
+/**
+ * reasons why a new render pass is needed
+ */
+export enum ERenderReason {
+  DIRTY,
+  SELECTION_CHANGED,
+  ZOOMED,
+  PERFORM_SCALE_AND_TRANSLATE,
+  AFTER_SCALE_AND_TRANSLATE,
+  PERFORM_TRANSLATE,
+  AFTER_TRANSLATE,
+  PERFORM_SCALE,
+  AFTER_SCALE
+}
+
+
+export declare type IMinMax = [number, number];
+
+/**
+ * visible window
+ */
+export interface IWindow {
+  xMinMax: IMinMax;
+  yMinMax: IMinMax;
+}
+
 export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
   if (given) {
     return given;
@@ -269,16 +266,8 @@ export interface ITransformDelta {
   ky: number;
 }
 
-/**
- * an class for rendering a scatterplot in a canvas
- */
-abstract class AScatterplot<T> extends EventEmitter {
-
-  static EVENT_SELECTION_CHANGED = 'selectionChanged';
-  static EVENT_RENDER = 'render';
-  static EVENT_WINDOW_CHANGED = 'windowChanged';
-
-  protected baseProps: IScatterplotBaseOptions<T> = {
+function defaultProps() {
+  return {
     margin: {
       left: 48,
       top: 10,
@@ -312,7 +301,16 @@ abstract class AScatterplot<T> extends EventEmitter {
 
     aspectRatio: 1
   };
+}
 
+/**
+ * an class for rendering a scatterplot in a canvas
+ */
+abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitter {
+
+  static EVENT_SELECTION_CHANGED = 'selectionChanged';
+  static EVENT_RENDER = 'render';
+  static EVENT_WINDOW_CHANGED = 'windowChanged';
 
   protected canvasDataLayer: HTMLCanvasElement;
   protected canvasSelectionLayer: HTMLCanvasElement;
@@ -336,19 +334,17 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected readonly parent: HTMLElement;
 
-  constructor(data: T[], root: HTMLElement, baseProps?: IScatterplotBaseOptions<T>) {
+  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
-
-    this.baseProps = merge(this.baseProps, baseProps);
-
+    this.props = <IScatterplotOptions<T>>merge(defaultProps(), this.props, props);
     this.parent = root.ownerDocument.createElement('div');
 
     //need to use d3 for d3.mouse to work
     const $parent = select(this.parent);
     root.appendChild(this.parent);
 
-    if (this.baseProps.zoom.scale !== null) {
-      const zoom = this.baseProps.zoom;
+    if (this.props.zoom.scale !== null) {
+      const zoom = this.props.zoom;
       //register zoom
       this.zoomBehavior = d3zoom()
         .on('start', this.onZoomStart.bind(this))
@@ -356,7 +352,7 @@ abstract class AScatterplot<T> extends EventEmitter {
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(zoom.scaleExtent)
         .translateExtent([[0,0], [+Infinity, +Infinity]])
-        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.baseProps.isSelectEvent(<MouseEvent>d3event)));
+        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(this.zoomBehavior)
         .on('wheel', () => d3event.preventDefault());
@@ -373,7 +369,7 @@ abstract class AScatterplot<T> extends EventEmitter {
         .on('start', this.onDragStart.bind(this))
         .on('drag', this.onDrag.bind(this))
         .on('end', this.onDragEnd.bind(this))
-        .filter(() => d3event.button === 0 && this.baseProps.isSelectEvent(<MouseEvent>d3event));
+        .filter(() => d3event.button === 0 && this.props.isSelectEvent(<MouseEvent>d3event));
       $parent.call(drag)
         .on('click', () => this.onClick(d3event));
     }
@@ -387,17 +383,18 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected initDOM(extraMarkup: string = '') {
     //init dom
+    console.log('TEST', this.props);
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
-      <svg class="${cssprefix}-axis-left" style="width: ${this.baseProps.margin.left + 2}px;">
-        <g transform="translate(${this.baseProps.margin.left},${this.baseProps.margin.top})"><g>
+      <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
+        <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
       </svg>
-      <svg class="${cssprefix}-axis-bottom" style="height: ${this.baseProps.margin.bottom}px;">
-        <g transform="translate(${this.baseProps.margin.left},0)"><g>
+      <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
+        <g transform="translate(${this.props.margin.left},0)"><g>
       </svg>
-      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.baseProps.margin.left + 2}px; right: ${this.baseProps.margin.right}px"><div>${this.props.xlabel}</div></div>
-      <div class="${cssprefix}-axis-left-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px"><div>${this.props.ylabel}</div></div>
+      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
+      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
       ${extraMarkup}
     `;
   }
@@ -434,15 +431,15 @@ abstract class AScatterplot<T> extends EventEmitter {
   }
 
   protected isSelectAble() {
-    return this.baseProps.isSelectEvent != null && (<any>this.baseProps.isSelectEvent) !== false;
+    return this.props.isSelectEvent != null && (<any>this.props.isSelectEvent) !== false;
   }
 
   protected hasExtras() {
-    return this.baseProps.extras != null;
+    return this.props.extras != null;
   }
 
   protected hasTooltips() {
-    return this.baseProps.showTooltip != null && (<any>this.baseProps.showTooltip) !== false;
+    return this.props.showTooltip != null && (<any>this.props.showTooltip) !== false;
   }
 
   protected resized() {
@@ -458,9 +455,9 @@ abstract class AScatterplot<T> extends EventEmitter {
 
     const computeClickRadius = () => {
       //compute the data domain radius based on xscale and the scaling factor
-      const view = this.baseProps.clickRadius;
+      const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const scale = this.baseProps.zoom.scale;
+      const scale = this.props.zoom.scale;
       const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
       const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
       const viewSizeX = kX * range(this.normalized2pixel.x.range());
@@ -593,8 +590,8 @@ abstract class AScatterplot<T> extends EventEmitter {
       return;
     }
 
-    const availableWidth = this.canvasDataLayer.width - this.baseProps.margin.left - this.baseProps.margin.right;
-    const availableHeight = this.canvasDataLayer.height - this.baseProps.margin.top - this.baseProps.margin.bottom;
+    const availableWidth = this.canvasDataLayer.width - this.props.margin.left - this.props.margin.right;
+    const availableHeight = this.canvasDataLayer.height - this.props.margin.top - this.props.margin.bottom;
     this.zoomBehavior
       .extent([[0, 0], [availableWidth, availableHeight]])
       .translateExtent([[0, 0], [availableWidth, availableHeight]]);
@@ -602,7 +599,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected rescale(axis: EScaleAxes, scale: IScale) {
     const c = this.currentTransform;
-    const p = this.baseProps.zoom.scale;
+    const p = this.props.zoom.scale;
     switch (axis) {
       case EScaleAxes.x:
         return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
@@ -615,7 +612,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   protected mousePosAtCanvas() {
     const pos = mouse(this.parent);
     // shift by the margin since the scales doesn't include them for better scaling experience
-    return [pos[0] - this.baseProps.margin.left, pos[1] - this.baseProps.margin.top];
+    return [pos[0] - this.props.margin.left, pos[1] - this.props.margin.top];
   }
 
   /**
@@ -637,7 +634,7 @@ abstract class AScatterplot<T> extends EventEmitter {
       const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
       return {k, t: (scale.range()[0] - pmin)};
     };
-    const s = this.baseProps.zoom.scale;
+    const s = this.props.zoom.scale;
     const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
     const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
     let k = 1;
@@ -676,7 +673,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
-    const scale = this.baseProps.zoom.scale;
+    const scale = this.props.zoom.scale;
     const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
     const schanged = (oldValue.k !== newValue.k);
     const delta = {
@@ -721,7 +718,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   private onDrag() {
     if (this.dragHandle < 0) {
-      this.dragHandle = setInterval(this.updateDrag.bind(this), this.baseProps.lasso.interval);
+      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
     }
     this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
@@ -747,7 +744,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   private retestLasso() {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     // shift by the margin since the scales doesn't include them for better scaling experience
-    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.baseProps.margin.left, -this.baseProps.margin.top);
+    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.margin.left, -this.props.margin.top);
     return tester && this.selectWithTester(tester);
   }
 
@@ -769,7 +766,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     const items = findByTester(this.tree, tester);
     // canvas pos doesn't include the margin
-    this.baseProps.showTooltip(this.parent, items, canvasPos[0] +  this.baseProps.margin.left, canvasPos[1] + this.baseProps.margin.top);
+    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top);
     this.showTooltipHandle = -1;
   }
 
@@ -779,13 +776,13 @@ abstract class AScatterplot<T> extends EventEmitter {
     }
     const pos = this.mousePosAtCanvas();
     //TODO find a more efficient way or optimize the timing
-    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.baseProps.tooltipDelay);
+    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.props.tooltipDelay);
   }
 
   private onMouseLeave(event: MouseEvent) {
     clearTimeout(this.showTooltipHandle);
     this.showTooltipHandle = -1;
-    this.baseProps.showTooltip(this.parent, [], 0, 0);
+    this.props.showTooltip(this.parent, [], 0, 0);
   }
 
   protected traverseTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false, x: IAccessor<T>, y: IAccessor<T>) {
@@ -830,7 +827,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   }
 
   protected setAxisFormat = (axis: Axis<number>, key: string) => {
-    const p = this.baseProps.format[key];
+    const p = this.props.format[key];
     if (p == null) {
       return;
     }
@@ -871,8 +868,8 @@ abstract class AScatterplot<T> extends EventEmitter {
     return minSize < 5; //TODO tune depend on visual impact
   }
 
-  protected abstract normalized2pixel;
   protected abstract props: IScatterplotOptions<T>;
+  protected abstract normalized2pixel;
   protected abstract transformedNormalized2PixelScales();
   protected abstract transformedScales();
   abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);

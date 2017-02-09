@@ -18,7 +18,6 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import AScatterplot, {
   fixScale,
   IScale,
-  IScatterplotBaseOptions,
   IScatterplotOptions,
   IScalesObject,
   EScaleAxes,
@@ -28,11 +27,8 @@ import AScatterplot, {
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
-/**
- * a class for rendering a scatterplot in a canvas
- */
-export default class Scatterplot<T> extends AScatterplot<T> {
-  protected props: IScatterplotOptions<T> = {
+function defaultProps<T>(): IScatterplotOptions<T> {
+  return {
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -44,7 +40,12 @@ export default class Scatterplot<T> extends AScatterplot<T> {
 
     symbol: 'o',
   };
+}
 
+/**
+ * a class for rendering a scatterplot in a canvas
+ */
+export default class Scatterplot<T> extends AScatterplot<T> {
 
   protected readonly normalized2pixel: IScalesObject = {
     x: scaleLinear(),
@@ -52,17 +53,17 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   };
 
   private readonly renderer: ISymbol<T>;
+  protected props: IScatterplotOptions<T>;
 
-  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>, baseProps?: IScatterplotBaseOptions<T>) {
-    super(data, root, baseProps);
-    this.props = merge(this.props, props);
+  constructor(data: T[], root: HTMLElement, props: IScatterplotOptions<T>) {
+    super(data, root, merge(defaultProps(), props));
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
 
     this.renderer = createRenderer(this.props.symbol);
 
     // generate aspect ratio right normalized domain
-    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.baseProps.aspectRatio));
+    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
 
     this.setDataImpl(data);
@@ -94,7 +95,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     }
 
     const c = this.canvasDataLayer,
-      margin = this.baseProps.margin,
+      margin = this.props.margin,
       bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
       boundsWidth = bounds.x1 - bounds.x0,
       boundsHeight = bounds.y1 - bounds.y0;
@@ -136,7 +137,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
-        this.baseProps.extras(ctx, xscale, yscale);
+        this.props.extras(ctx, xscale, yscale);
         ctx.restore();
       }
 
@@ -169,7 +170,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.baseProps.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();

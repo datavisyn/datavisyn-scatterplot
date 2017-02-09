@@ -18,7 +18,6 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import AScatterplot, {
   fixScale,
   IScale,
-  IScatterplotBaseOptions,
   IScatterplotOptions,
   IScalesObject,
   IAccessor,
@@ -76,12 +75,8 @@ export interface IScatterplotOptionsDualAxis<T> extends IScatterplotOptions<T> {
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
-/**
- * a class for rendering a double y-axis scatterplot in a canvas
- */
-export default class DualAxisScatterplot<T> extends AScatterplot<T> {
-
-  protected props: IScatterplotOptionsDualAxis<T> = {
+function defaultProps<T>(): IScatterplotOptionsDualAxis<T> {
+  return {
     x: (d) => (<any>d).x,
     y: (d) => (<any>d).y,
 
@@ -99,7 +94,12 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     symbol: 'o',
     symbol2: 'o',
   };
+}
 
+/**
+ * a class for rendering a double y-axis scatterplot in a canvas
+ */
+export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
   protected readonly normalized2pixel: IScalesObjectDualAxis = {
     x: scaleLinear(),
@@ -109,13 +109,13 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
   private secondaryTree: Quadtree<T>;
 
-
   private readonly renderer: ISymbol<T>;
   private readonly secondaryRenderer: ISymbol<T>;
 
-  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptionsDualAxis<T>, baseProps?: IScatterplotBaseOptions<T>) {
-    super(data, root, baseProps);
-    this.props = merge(this.props, props);
+  protected props: IScatterplotOptionsDualAxis<T>;
+
+  constructor(data: T[], secondaryData: T[], root: HTMLElement, props: IScatterplotOptionsDualAxis<T>) {
+    super(data, root, merge(defaultProps<IScatterplotOptionsDualAxis<T>>(), props));
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
     this.props.y2scale = fixScale(this.props.y2scale, this.props.y2, secondaryData, props ? props.y2scale : null, props ? props.y2lim : null);
@@ -124,7 +124,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.secondaryRenderer = createRenderer(this.props.symbol2);
 
     // generate aspect ratio right normalized domain
-    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.baseProps.aspectRatio));
+    this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
     this.normalized2pixel.y.domain(DEFAULT_NORMALIZED_RANGE);
     this.normalized2pixel.y2.domain(DEFAULT_NORMALIZED_RANGE);
 
@@ -134,10 +134,10 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
 
     this.initDOM(`
-      <svg class="${cssprefix}-axis-right" style="width: ${this.baseProps.margin.left + 2}px; right: 0">
-        <g transform="translate(0,${this.baseProps.margin.top})"><g>
+      <svg class="${cssprefix}-axis-right" style="width: ${this.props.margin.left + 2}px; right: 0">
+        <g transform="translate(0,${this.props.margin.top})"><g>
       </svg>
-      <div class="${cssprefix}-axis-right-label"  style="top: ${this.baseProps.margin.top + 2}px; bottom: ${this.baseProps.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
+      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
     `);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
@@ -176,7 +176,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
     }
 
     const c = this.canvasDataLayer,
-      margin = this.baseProps.margin,
+      margin = this.props.margin,
       bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
       boundsWidth = bounds.x1 - bounds.x0,
       boundsHeight = bounds.y1 - bounds.y0;
@@ -226,7 +226,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
 
       if (isSelection && this.hasExtras()) {
         ctx.save();
-        this.baseProps.extras(ctx, xscale, yscale);
+        this.props.extras(ctx, xscale, yscale);
         ctx.restore();
       }
 
@@ -260,7 +260,7 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.baseProps.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
