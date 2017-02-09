@@ -18,6 +18,7 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import AScatterplot, {
   fixScale,
   IScale,
+  IScatterplotBaseOptions,
   IScatterplotOptions,
   IScalesObject,
   IAccessor,
@@ -75,12 +76,6 @@ export interface IScatterplotOptionsDualAxis<T> extends IScatterplotOptions<T> {
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
-const customBaseProps = {
-  margin: {
-    right: 50
-  }
-};
-
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
@@ -118,8 +113,8 @@ export default class DualAxisScatterplot<T> extends AScatterplot<T> {
   private readonly renderer: ISymbol<T>;
   private readonly secondaryRenderer: ISymbol<T>;
 
-  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptionsDualAxis<T>) {
-    super(data, root, customBaseProps);
+  constructor(data: T[], secondaryData: T[], root: HTMLElement, props?: IScatterplotOptionsDualAxis<T>, baseProps?: IScatterplotBaseOptions<T>) {
+    super(data, root, baseProps);
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);

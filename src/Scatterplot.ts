@@ -18,6 +18,7 @@ import {cssprefix, DEBUG, debuglog} from './constants';
 import AScatterplot, {
   fixScale,
   IScale,
+  IScatterplotBaseOptions,
   IScatterplotOptions,
   IScalesObject,
   EScaleAxes,
@@ -52,8 +53,8 @@ export default class Scatterplot<T> extends AScatterplot<T> {
 
   private readonly renderer: ISymbol<T>;
 
-  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
-    super(data, root);
+  constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>, baseProps?: IScatterplotBaseOptions<T>) {
+    super(data, root, baseProps);
     this.props = merge(this.props, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);

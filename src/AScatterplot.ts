@@ -278,7 +278,6 @@ abstract class AScatterplot<T> extends EventEmitter {
   static EVENT_RENDER = 'render';
   static EVENT_WINDOW_CHANGED = 'windowChanged';
 
-  private childProps: IScatterplotOptions<T>;
   protected baseProps: IScatterplotBaseOptions<T> = {
     margin: {
       left: 48,
@@ -337,7 +336,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected readonly parent: HTMLElement;
 
-  constructor(data: T[], root: HTMLElement, baseProps?: IScatterplotBaseOptions<T>, childProps?: IScatterplotOptions<T>) {
+  constructor(data: T[], root: HTMLElement, baseProps?: IScatterplotBaseOptions<T>) {
     super();
 
     this.baseProps = merge(this.baseProps, baseProps);
