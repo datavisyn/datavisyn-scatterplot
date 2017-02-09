@@ -87,7 +87,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     return {n2pX, n2pY};
   }
 
-  protected render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
+  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
     if (this.checkResize()) {
       //check resize
       return this.resized();

@@ -875,7 +875,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   protected abstract props: IScatterplotOptions<T>;
   protected abstract transformedNormalized2PixelScales();
   protected abstract transformedScales();
-  protected abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
+  abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
 }
 
 export default AScatterplot;
