@@ -383,7 +383,6 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
 
   protected initDOM(extraMarkup: string = '') {
     //init dom
-    console.log('TEST', this.props);
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
