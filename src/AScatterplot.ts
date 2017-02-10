@@ -30,6 +30,12 @@ export enum EScaleAxes {
   x, y, xy
 }
 
+export interface IBoundsObject {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
 
 /**
  * a d3 scale essentially
@@ -48,10 +54,14 @@ export interface IScalesObject {
   y: IScale;
 }
 
+export interface INormalizedScalesObject {
+  n2pX: IScale;
+  n2pY: IScale;
+}
+
 export interface IAccessor<T> {
   (v: T): number;
 }
-
 
 export interface IZoomOptions {
   /**
@@ -249,7 +259,7 @@ export interface IWindow {
   yMinMax: IMinMax;
 }
 
-export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: T[], given: IScale, givenLimits: [number, number]) {
+export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: (T)[], given: IScale, givenLimits: [number, number]) {
   if (given) {
     return given;
   }
@@ -266,7 +276,7 @@ export interface ITransformDelta {
   ky: number;
 }
 
-function defaultProps() {
+function defaultProps<T>(): IScatterplotOptions<T> {
   return {
     margin: {
       left: 48,
@@ -306,7 +316,7 @@ function defaultProps() {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitter {
+abstract class AScatterplot<T> extends EventEmitter {
 
   static EVENT_SELECTION_CHANGED = 'selectionChanged';
   static EVENT_RENDER = 'render';
@@ -333,6 +343,12 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
   protected dragHandle = -1;
 
   protected readonly parent: HTMLElement;
+
+  protected abstract props: IScatterplotOptions<T>;
+  protected abstract normalized2pixel;
+  protected abstract transformedNormalized2PixelScales(): INormalizedScalesObject;
+  protected abstract transformedScales(): IScalesObject;
+  abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta): void;
 
   constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {
     super();
@@ -784,13 +800,13 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
     this.props.showTooltip(this.parent, [], 0, 0);
   }
 
-  protected traverseTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false, x: IAccessor<T>, y: IAccessor<T>) {
+  protected traverseTree<X>(ctx: CanvasRenderingContext2D, tree: Quadtree<X>, renderer: ISymbolRenderer<X>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false, x: IAccessor<X>, y: IAccessor<X>) {
     //debug stats
     let rendered = 0, aggregated = 0, hidden = 0;
 
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
-    const visitTree = (node: QuadtreeInternalNode<T> | QuadtreeLeaf<T>, x0: number, y0: number, x1: number, y1: number) => {
+    const visitTree = (node: QuadtreeInternalNode<X>| QuadtreeLeaf<X>, x0: number, y0: number, x1: number, y1: number) => {
       if (!isNodeVisible(x0, y0, x1, y1)) {
         hidden += debug ? getTreeSize(node) : 0;
         return ABORT_TRAVERSAL;
@@ -804,7 +820,7 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
         return ABORT_TRAVERSAL;
       }
       if (isLeafNode(node)) { //is a leaf
-        rendered += forEachLeaf(<QuadtreeLeaf<T>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
+        rendered += forEachLeaf(<QuadtreeLeaf<X>>node, (d) => renderer.render(xscale(x(d)), yscale(y(d)), d));
       }
       return CONTINUE_TRAVERSAL;
     };
@@ -825,7 +841,7 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
     ctx.restore();
   }
 
-  protected setAxisFormat = (axis: Axis<number>, key: string) => {
+  protected setAxisFormat(axis: Axis<number>, key: string) {
     const p = this.props.format[key];
     if (p == null) {
       return;
@@ -833,7 +849,7 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
     axis.tickFormat(typeof p === 'string' ? format(p) : p);
   }
 
-  protected transformData(c, bounds, boundsWidth, boundsHeight, x: number, y: number, kx: number, ky: number) {
+  protected transformData(c: HTMLCanvasElement, bounds: IBoundsObject, boundsWidth: number, boundsHeight: number, x: number, y: number, kx: number, ky: number) {
     //idea copy the data layer to selection layer in a transformed way and swap
     const ctx = this.canvasSelectionLayer.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
@@ -866,12 +882,6 @@ abstract class AScatterplot<T extends IScatterplotOptions<T>> extends EventEmitt
     const minSize = Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
     return minSize < 5; //TODO tune depend on visual impact
   }
-
-  protected abstract props: IScatterplotOptions<T>;
-  protected abstract normalized2pixel;
-  protected abstract transformedNormalized2PixelScales();
-  protected abstract transformedScales();
-  abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta);
 }
 
 export default AScatterplot;

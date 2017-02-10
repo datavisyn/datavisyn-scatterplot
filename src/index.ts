@@ -4,7 +4,7 @@
 
 import './style.scss';
 import Scatterplot from './Scatterplot';
-import DualAxisScatterplot, {IScatterplotOptionsDualAxis} from './DualAxisScatterplot';
+import DualAxisScatterplot, {IDualAxisScatterplotOptions} from './DualAxisScatterplot';
 import * as _symbol from './symbol';
 import * as d3scale from 'd3-scale';
 import {IScatterplotOptions} from './AScatterplot';
@@ -24,6 +24,6 @@ export function create<T>(data:T[], canvas:HTMLCanvasElement, options: IScatterp
   return new Scatterplot(data, canvas, options);
 }
 
-export function dualAxis<T>(data:T[], secondaryData:T[], canvas:HTMLCanvasElement, options: IScatterplotOptionsDualAxis<T>) {
+export function dualAxis<T, U>(data:T[], secondaryData:U[], canvas:HTMLCanvasElement, options: IDualAxisScatterplotOptions<T, U>) {
   return new DualAxisScatterplot(data, secondaryData, canvas, options);
 }

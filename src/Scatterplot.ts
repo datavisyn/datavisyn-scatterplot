@@ -22,6 +22,7 @@ import AScatterplot, {
   IScalesObject,
   EScaleAxes,
   ERenderReason,
+  INormalizedScalesObject,
 } from './AScatterplot';
 
 //normalized range the quadtree is defined
@@ -82,13 +83,13 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     return { x: xscale, y: yscale};
   }
 
-  protected transformedNormalized2PixelScales() {
+  protected transformedNormalized2PixelScales(): INormalizedScalesObject {
     const n2pX = this.rescale(EScaleAxes.x, this.normalized2pixel.x);
     const n2pY = this.rescale(EScaleAxes.y, this.normalized2pixel.y);
     return {n2pX, n2pY};
   }
 
-  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}) {
+  render(reason = ERenderReason.DIRTY, transformDelta = {x: 0, y: 0, kx: 1, ky: 1}): void {
     if (this.checkResize()) {
       //check resize
       return this.resized();
