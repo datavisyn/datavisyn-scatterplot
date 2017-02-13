@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scatterplot Test</title>
+    <style>
+        .datavisyn-scatterplot {
+            width: 520px;
+            height: 500px
+        }
+    </style>
+</head>
+<body>
+<h1>
+  Scatterplot test
+</h1>
+<label>Number of Points:
+    <input type="number" step="1000" value="10000">
+  </label>
+<section>
+<div id="root"></div>
+<div id="minimap" style="width: 250px; height: 250px"></div>
+</section>
+<section>
+<pre>
+  Notes:
+   * drag/zoom as usual
+   * tooltip after a while
+   * lasso selection using ctrl/alt key
+   * single selection should work
+   * debug output with rendering information
+   * build with Typescript + Webpack2
+</pre>
+</section>
+<script src="scatterplot.js"></script>
+<script>
+  (function () {
+    function rebuild(count) {
+      var data = [];
+      var secondaryData = [];
+      console.time('gen');
+      for (var i = 0; i < count; ++i) {
+        //data.push({x: 100*i/count, y: 100*(count-i)/count});
+        data.push({x: Math.random()*100, y: Math.random()*100});
+      }
+
+      for (var j = 0; j < 20; ++j) {
+        secondaryData.push([Math.random()*100, Math.random()*1000]);
+      }
+
+      console.timeEnd('gen');
+      var div = document.querySelector('#root');
+      div.innerHTML = ''; //clear existing stuff
+
+      var s = datavisyn.scatterplot.dualAxis(
+          data,
+          secondaryData,
+          div,
+          {
+              margin: { right: 50 },
+              symbol2: "l:red",
+              xlim: [0,100],
+              ylim: [0,100],
+              y2lim: [0, 1000],
+              x2: function(d) { return d[0] },
+              y2: function(d) { return d[1] }
+          }
+      );
+      //hack render to have information
+      var bak = s.render.bind(s);
+      s.render = function() {
+        console.time('render');
+        bak.apply(s, [].slice. call(arguments));
+        console.timeEnd('render');
+      };
+
+      //var m = new datavisyn.scatterplot.MiniMap(s, document.querySelector('#minimap'));
+
+      s.render();
+    }
+
+    document.querySelector('input').onchange = function() {
+      rebuild(+this.value);
+    };
+    rebuild(100);
+  })();
+
+  //React.render(
+  //  <MyComponent>Body</MyComponent>,
+  //  body
+//);
+</script>
+</body>
+</html>

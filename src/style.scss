@@ -35,12 +35,16 @@
       z-index: 3;
     }
 
+    &.datavisyn-scatterplot-axis-right {
+      position: absolute;
+    }
+
 
 
   }
 
   div {
-    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-bottom-label {
+    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-bottom-label, &.datavisyn-scatterplot-axis-right-label {
       pointer-events: none;
       user-select: none;
       text-align: center;
@@ -51,7 +55,7 @@
       bottom: 0;
     }
 
-    &.datavisyn-scatterplot-axis-left-label {
+    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-right-label {
       display: flex;
       justify-content: center;
       align-items: center;
