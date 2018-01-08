@@ -337,7 +337,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   protected readonly lasso = new Lasso();
 
   protected currentTransform: ZoomTransform = zoomIdentity;
-  protected zoomBehavior: ZoomBehavior<HTMLElement, any>;
+  protected zoomBehavior: ZoomBehavior<Element, any>;
   protected zoomStartTransform: ZoomTransform;
   protected zoomHandle = -1;
   protected dragHandle = -1;
