@@ -4,7 +4,7 @@
 
 import Scatterplot from './Scatterplot';
 import {select, event as d3event} from 'd3-selection';
-import {scaleLinear} from 'd3-scale';
+import {ScaleLinear, scaleLinear} from 'd3-scale';
 import {brushX, brushY, brush, D3BrushEvent, BrushBehavior} from 'd3-brush';
 import merge from './merge';
 import {cssprefix} from './constants';
@@ -61,16 +61,16 @@ export default class MiniMap {
     switch (this.props.scale) {
       case EScaleAxes.x:
         sx = <IMinMax>s;
-        xMinMax = <IMinMax>sx.map(this.xscale.invert.bind(this.xscale));
+        xMinMax = this.scale(sx, this.xscale.invert.bind(this.xscale));
         break;
       case EScaleAxes.y:
         sy = <IMinMax>s;
-        yMinMax = <IMinMax>sy.map(this.yscale.invert.bind(this.yscale));
+        yMinMax = this.scale(sy, this.yscale.invert.bind(this.yscale));
         break;
       default:
         [sx, sy] = <[IMinMax, IMinMax]>s;
-        xMinMax = <IMinMax>sx.map(this.xscale.invert.bind(this.xscale));
-        yMinMax = <IMinMax>sy.map(this.yscale.invert.bind(this.yscale));
+        xMinMax = this.scale(sx, this.xscale.invert.bind(this.xscale));
+        yMinMax = this.scale(sy, this.yscale.invert.bind(this.yscale));
         break;
     }
     return {xMinMax, yMinMax};
@@ -86,15 +86,25 @@ export default class MiniMap {
     const $node = select<SVGGElement,any>(this.node);
     switch (this.props.scale) {
       case EScaleAxes.x:
-        this.brush.move($node, window.xMinMax.map(this.xscale));
+        this.brush.move($node, this.scale(window.xMinMax, this.xscale));
         break;
       case EScaleAxes.y:
-        this.brush.move($node, window.yMinMax.map(this.yscale));
+        this.brush.move($node, this.scale(window.yMinMax, this.yscale));
         break;
       default:
-        const s: [IMinMax, IMinMax] = [<IMinMax>window.xMinMax.map(this.xscale), <IMinMax>window.yMinMax.map(this.yscale)];
+        const s: [IMinMax, IMinMax] = [this.scale(window.xMinMax, this.xscale), this.scale(window.yMinMax, this.yscale)];
         this.brush.move($node, s);
         break;
     }
+  }
+
+  /**
+   * Utility method to scale two elements of a tuple type instead of calling the map function on a Tuple type
+   * @param {IMinMax} minMax
+   * @param {ScaleLinear<number, number>} scale
+   * @returns {[number , number]}
+   */
+  private scale(minMax: IMinMax, scale: ScaleLinear<number, number>) : [number, number] {
+    return [scale(minMax[0]), scale(minMax[1])];
   }
 }
