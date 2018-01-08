@@ -167,7 +167,7 @@ export function getFirstLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):
   } else {
     //manually visit the children
     const inner = <QuadtreeInternalNode<T>>node;
-    return inner.reduce((f, act) => f ? f : getFirstLeaf(act), null);
+    return <T>inner.reduce((f, act) => f ? f : getFirstLeaf(act), null);
   }
 }
 
@@ -185,7 +185,7 @@ export function getRandomLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>)
     //shuffle the sub tree
     const inner = shuffle((<QuadtreeInternalNode<T>>node).slice());
 
-    return inner.reduce((f, act) => f || !act ? f : getRandomLeaf(act), null);
+    return <T>inner.reduce((f, act) => f || !act ? f : getRandomLeaf(act), null);
   }
 }
 
