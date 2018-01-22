@@ -347,7 +347,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   protected abstract props: IScatterplotOptions<T>;
   protected abstract normalized2pixel;
   protected abstract transformedNormalized2PixelScales(): INormalizedScalesObject;
-  protected abstract transformedScales(): IScalesObject;
+  abstract transformedScales(): IScalesObject;
   abstract render(reason?: ERenderReason, transformDelta?: ITransformDelta): void;
 
   constructor(data: T[], root: HTMLElement, props?: IScatterplotOptions<T>) {

@@ -77,7 +77,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     this.canvasSelectionLayer = <HTMLCanvasElement>this.parent.children[1];
   }
 
-  protected transformedScales(): IScalesObject {
+  transformedScales(): IScalesObject {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     return { x: xscale, y: yscale};
