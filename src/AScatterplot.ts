@@ -698,13 +698,13 @@ abstract class AScatterplot<T> extends EventEmitter {
       ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
     };
     if (tchanged && schanged) {
-      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window, this.transformedScales());
       this.render(ERenderReason.PERFORM_SCALE_AND_TRANSLATE, delta);
     } else if (schanged) {
-      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window, this.transformedScales());
       this.render(ERenderReason.PERFORM_SCALE, delta);
     } else if (tchanged) {
-      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window);
+      this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window, this.transformedScales());
       this.render(ERenderReason.PERFORM_TRANSLATE, delta);
     }
     //nothing if no changed
