@@ -397,6 +397,10 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.parent.classList.add(cssprefix);
   }
 
+  get node() {
+    return this.parent;
+  }
+
   protected initDOM(extraMarkup: string = '') {
     //init dom
     this.parent.innerHTML = `
