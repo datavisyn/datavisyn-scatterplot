@@ -170,7 +170,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
     this.render(ERenderReason.DIRTY);
   }
 
-  protected transformedScales(): IDualAxisScalesObject {
+  transformedScales(): IDualAxisScalesObject {
     const xscale = this.rescale(EScaleAxes.x, this.props.xscale);
     const yscale = this.rescale(EScaleAxes.y, this.props.yscale);
     const y2scale = this.rescale(EScaleAxes.y, this.props.y2scale);
