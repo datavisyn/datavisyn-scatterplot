@@ -224,13 +224,15 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       zoomLevel: this.currentTransform.k
     };
 
+    const border = this.props.margin.canvasBorder;
+
     const renderCtx = (isSelection = false, isSecondary = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
       if(!isSecondary) {
         ctx.clearRect(0, 0, c.width, c.height);
       }
       ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
+      ctx.rect(bounds.x0 - border, bounds.y0 - border, boundsWidth + border * 2, boundsHeight + border * 2);
       ctx.clip();
       const tree = isSelection ? this.selectionTree : isSecondary? this.secondaryTree : this.tree;
       const renderer = isSecondary? this.secondaryRenderer(ctx, ERenderMode.NORMAL, renderInfo) : this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
