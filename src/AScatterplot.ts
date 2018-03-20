@@ -119,6 +119,7 @@ export interface IScatterplotOptions<T> {
     top?: number;
     right?: number;
     bottom?: number;
+    canvasBorder?: number;
   };
 
   zoom?: IZoomOptions;
@@ -287,7 +288,8 @@ function defaultProps<T>(): IScatterplotOptions<T> {
       left: 48,
       top: 10,
       bottom: 32,
-      right: 10
+      right: 10,
+      canvasBorder: 0
     },
     clickRadius: 10,
 

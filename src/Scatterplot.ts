@@ -124,11 +124,13 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       zoomLevel: this.currentTransform.k
     };
 
+    const border = this.props.margin.canvasBorder;
+
     const renderCtx = (isSelection = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
-      ctx.rect(bounds.x0, bounds.y0, boundsWidth, boundsHeight);
+      ctx.rect(bounds.x0 - border, bounds.y0 - border, boundsWidth + border * 2, boundsHeight + border * 2);
       ctx.clip();
 
       const tree = isSelection ? this.selectionTree : this.tree;
