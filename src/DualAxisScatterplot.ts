@@ -239,6 +239,12 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
 
+      if (!isSelection && this.hasBackground()) {
+        ctx.save();
+        this.props.renderBackground(ctx, xscale, yscale);
+        ctx.restore();
+      }
+
       this.renderTree<T|U>(ctx, tree, renderer, xscale, isSecondary? y2scale : yscale, isSecondary? isNodeVisible2 : isNodeVisible, isSecondary, debug);
 
       if (isSelection && this.hasExtras()) {

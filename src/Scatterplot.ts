@@ -132,10 +132,18 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       ctx.save();
       ctx.rect(bounds.x0 - border, bounds.y0 - border, boundsWidth + border * 2, boundsHeight + border * 2);
       ctx.clip();
+
       const tree = isSelection ? this.selectionTree : this.tree;
       const renderer = this.renderer(ctx, isSelection ? ERenderMode.SELECTED : ERenderMode.NORMAL, renderInfo);
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
+
+      if (!isSelection && this.hasBackground()) {
+        ctx.save();
+        this.props.renderBackground(ctx, xscale, yscale);
+        ctx.restore();
+      }
+
       this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug);
 
       if (isSelection && this.hasExtras()) {
