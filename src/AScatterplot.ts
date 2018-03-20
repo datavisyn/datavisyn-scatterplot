@@ -231,6 +231,11 @@ export interface IScatterplotOptions<T> {
    * optional hint for the scatterplot in which aspect ratio it will be rendered. This is useful for improving the selection and interaction in non 1:1 aspect ratios
    */
   aspectRatio?: number;
+
+  /**
+   * additional background rendering
+   */
+  renderBackground?(ctx: CanvasRenderingContext2D, xscale: IScale, yscale: IScale);
 }
 
 /**
@@ -455,6 +460,10 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected hasExtras() {
     return this.props.extras != null;
+  }
+
+  protected hasBackground() {
+    return this.props.renderBackground != null;
   }
 
   protected hasTooltips() {
