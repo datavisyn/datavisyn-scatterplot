@@ -200,8 +200,9 @@ export interface IScatterplotOptions<T> {
    * @param items items to show, empty to hide tooltip
    * @param x the x position relative to the plot
    * @param y the y position relative to the plot
+   * @param event the MouseEvent
    */
-  showTooltip?(parent: HTMLElement, items: T[], x: number, y: number);
+  showTooltip?(parent: HTMLElement, items: T[], x: number, y: number, event?: MouseEvent);
 
   /**
    * determines whether the given mouse is a selection or panning event, if `null` or `false` selection is disabled
@@ -790,13 +791,13 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.selectWithTester(tester);
   }
 
-  private showTooltip(canvasPos: [number, number]) {
+  private showTooltip(canvasPos: [number, number], event?: MouseEvent) {
     //highlight selected item
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     const items = findByTester(this.tree, tester);
     // canvas pos doesn't include the margin
-    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top);
+    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top, event);
     this.showTooltipHandle = -1;
   }
 
@@ -806,13 +807,13 @@ abstract class AScatterplot<T> extends EventEmitter {
     }
     const pos = this.mousePosAtCanvas();
     //TODO find a more efficient way or optimize the timing
-    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos), this.props.tooltipDelay);
+    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos, event), this.props.tooltipDelay);
   }
 
   private onMouseLeave(event: MouseEvent) {
     clearTimeout(this.showTooltipHandle);
     this.showTooltipHandle = -1;
-    this.props.showTooltip(this.parent, [], 0, 0);
+    this.props.showTooltip(this.parent, [], 0, 0, event);
   }
 
   protected traverseTree<X>(ctx: CanvasRenderingContext2D, tree: Quadtree<X>, renderer: ISymbolRenderer<X>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false, x: IAccessor<X>, y: IAccessor<X>) {
