@@ -178,7 +178,7 @@ export interface IScatterplotOptions<T> {
    * symbol used to render an data point
    * default: steelblue circle
    */
-  symbol?: ISymbol<T>|string;
+  symbol?: ISymbol<T> | string;
 
   /**
    * the radius in pixel in which a mouse click will be searched
@@ -352,7 +352,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
   protected readonly parent: HTMLElement;
 
-  protected abstract props: IScatterplotOptions<T>;
+  protected props: IScatterplotOptions<T>;
   protected abstract normalized2pixel;
   protected abstract transformedNormalized2PixelScales(): INormalizedScalesObject;
   abstract transformedScales(): IScalesObject;
@@ -375,7 +375,7 @@ abstract class AScatterplot<T> extends EventEmitter {
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(zoom.scaleExtent)
-        .translateExtent([[0,0], [+Infinity, +Infinity]])
+        .translateExtent([[0, 0], [+Infinity, +Infinity]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
       $parent
         .call(this.zoomBehavior)
@@ -688,7 +688,7 @@ abstract class AScatterplot<T> extends EventEmitter {
    * @returns {{xMinMax: [number,number], yMinMax: [number,number]}}
    */
   get window(): IWindow {
-    const { x: xscale, y: yscale} = this.transformedScales();
+    const {x: xscale, y: yscale} = this.transformedScales();
     return {
       xMinMax: <IMinMax>(xscale.range().map(xscale.invert.bind(xscale))),
       yMinMax: <IMinMax>(yscale.range().map(yscale.invert.bind(yscale)))
@@ -700,7 +700,7 @@ abstract class AScatterplot<T> extends EventEmitter {
   }
 
   private onZoom() {
-    const evt = <D3ZoomEvent<any,any>>d3event;
+    const evt = <D3ZoomEvent<any, any>>d3event;
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
@@ -822,7 +822,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
 
-    const visitTree = (node: QuadtreeInternalNode<X>| QuadtreeLeaf<X>, x0: number, y0: number, x1: number, y1: number) => {
+    const visitTree = (node: QuadtreeInternalNode<X> | QuadtreeLeaf<X>, x0: number, y0: number, x1: number, y1: number) => {
       if (!isNodeVisible(x0, y0, x1, y1)) {
         hidden += debug ? getTreeSize(node) : 0;
         return ABORT_TRAVERSAL;
