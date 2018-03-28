@@ -791,7 +791,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.selectWithTester(tester);
   }
 
-  private showTooltip(canvasPos: [number, number], event?: MouseEvent) {
+  private showTooltip(canvasPos: [number, number], event: MouseEvent) {
     //highlight selected item
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
