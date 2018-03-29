@@ -797,7 +797,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     const items = findByTester(this.tree, tester);
     // canvas pos doesn't include the margin
-    this.props.showTooltip(this.parent, items, canvasPos[0] +  this.props.margin.left, canvasPos[1] + this.props.margin.top, event);
+    this.props.showTooltip(this.parent, items, canvasPos[0] + this.props.margin.left, canvasPos[1] + this.props.margin.top, event);
     this.showTooltipHandle = -1;
   }
 
