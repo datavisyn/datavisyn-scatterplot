@@ -390,6 +390,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
     if (this.isSelectAble()) {
       const drag = d3drag()
+        .container(function(this: any) { return this; })
         .on('start', this.onDragStart.bind(this))
         .on('drag', this.onDrag.bind(this))
         .on('end', this.onDragEnd.bind(this))
