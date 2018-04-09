@@ -705,24 +705,19 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.zoomStartTransform = this.currentTransform;
   }
 
-  private shiftTransform(t: ZoomTransform) {
-    // zoom transform is over the whole canvas an not just the center part in which the scales are defined
-    return t;
-  }
-
   private onZoom() {
     const evt = <D3ZoomEvent<any, any>>d3event;
-    const newValue: ZoomTransform = this.shiftTransform(evt.transform);
+    const transform: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
-    this.currentTransform = newValue;
+    this.currentTransform = transform;
     const scale = this.props.zoom.scale;
-    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
-    const schanged = (oldValue.k !== newValue.k);
+    const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== transform.x) || (scale !== EScaleAxes.x && oldValue.y !== transform.y));
+    const schanged = (oldValue.k !== transform.k);
     const delta = {
-      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.x - oldValue.x : 0,
-      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.y - oldValue.y : 0,
-      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1,
-      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? newValue.k / oldValue.k : 1
+      x: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.x - oldValue.x : 0,
+      y: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.y - oldValue.y : 0,
+      kx: (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k / oldValue.k : 1,
+      ky: (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k / oldValue.k : 1
     };
     if (tchanged && schanged) {
       this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window, this.transformedScales());
