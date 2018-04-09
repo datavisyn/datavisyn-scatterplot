@@ -369,6 +369,7 @@ abstract class AScatterplot<T> extends EventEmitter {
 
     if (this.props.zoom.scale !== null) {
       const zoom = this.props.zoom;
+
       //register zoom
       this.zoomBehavior = d3zoom()
         .on('start', this.onZoomStart.bind(this))
@@ -377,9 +378,6 @@ abstract class AScatterplot<T> extends EventEmitter {
         .scaleExtent(zoom.scaleExtent)
         .translateExtent([[0, 0], [+Infinity, +Infinity]])
         .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
-      $parent
-        .call(this.zoomBehavior)
-        .on('wheel', () => d3event.preventDefault());
       if (zoom.window != null) {
         this.window = zoom.window;
       } else {
@@ -415,6 +413,7 @@ abstract class AScatterplot<T> extends EventEmitter {
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && !this.hasExtras() ? 'style="visibility: hidden"' : ''}></canvas>
+      <div class="${cssprefix}-draw-area"  style="left: ${this.props.margin.left}px; right: ${this.props.margin.right}px; top: ${this.props.margin.top}px; bottom: ${this.props.margin.bottom}px"></div>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
       </svg>
@@ -425,6 +424,12 @@ abstract class AScatterplot<T> extends EventEmitter {
       <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
       ${extraMarkup}
     `;
+
+    if (this.zoomBehavior) {
+      select(this.parent).select(`.${cssprefix}-draw-area`)
+        .call(this.zoomBehavior)
+        .on('wheel', () => d3event.preventDefault());
+    }
   }
 
   get data() {
