@@ -6,17 +6,16 @@ import Scatterplot from './Scatterplot';
 import {select, event as d3event} from 'd3-selection';
 import {ScaleLinear, scaleLinear} from 'd3-scale';
 import {brushX, brushY, brush, D3BrushEvent, BrushBehavior} from 'd3-brush';
-import merge from './merge';
 import {cssprefix} from './constants';
 import {EScaleAxes, IMinMax, IWindow} from './AScatterplot';
 
 export interface IMiniMapOptions {
-  scale?: EScaleAxes;
+  scale: EScaleAxes;
 }
 
 export default class MiniMap {
   private readonly brush: BrushBehavior<any>;
-  private readonly props: IMiniMapOptions = {
+  private readonly props: Readonly<IMiniMapOptions> = {
     scale: EScaleAxes.xy
   };
 
@@ -24,8 +23,8 @@ export default class MiniMap {
   private readonly yscale = scaleLinear();
   private readonly node: SVGGElement;
 
-  constructor(private plot: Scatterplot<any>, private parent: HTMLElement, props: IMiniMapOptions = {}) {
-    this.props = merge(this.props, props);
+  constructor(plot: Scatterplot<any>, private parent: HTMLElement, props: Partial<IMiniMapOptions> = {}) {
+    this.props = Object.assign(this.props, props);
     parent.innerHTML = `<svg class="${cssprefix}-minimap"><g></g></svg>`;
     parent.classList.add(cssprefix);
 
@@ -43,7 +42,7 @@ export default class MiniMap {
     const d = plot.domain;
     this.xscale.domain(d.xMinMax);
     this.yscale.domain(d.yMinMax);
-    const $node = select(parent).select('svg > g').call(this.brush);
+    const $node = select(parent).select<SVGGElement>('svg > g').call(this.brush);
     this.node = <SVGGElement>$node.node();
 
     this.update(plot.window);
@@ -79,8 +78,8 @@ export default class MiniMap {
   private update(window: IWindow) {
     this.xscale.range([0, this.parent.clientWidth]);
     this.yscale.range([0, this.parent.clientHeight]);
-    this.node.parentElement.setAttribute('width', this.parent.clientWidth.toString());
-    this.node.parentElement.setAttribute('height', this.parent.clientHeight.toString());
+    this.node.parentElement!.setAttribute('width', this.parent.clientWidth.toString());
+    this.node.parentElement!.setAttribute('height', this.parent.clientHeight.toString());
     this.brush.extent([<IMinMax>this.xscale.range(), <IMinMax>this.yscale.range()]);
 
     const $node = select<SVGGElement,any>(this.node);

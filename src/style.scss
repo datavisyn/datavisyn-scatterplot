@@ -3,7 +3,7 @@
  */
 
 @mixin abspos() {
-	position: absolute;
+  position: absolute;
   width: 100%;
   height: 100%;
 }
@@ -18,10 +18,12 @@
       pointer-events: none;
       z-index: 1;
     }
+
     &.datavisyn-scatterplot-selection-layer {
       z-index: 2;
     }
   }
+
   svg {
     pointer-events: none;
     @include abspos();
@@ -41,7 +43,9 @@
   }
 
   div {
-    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-bottom-label, &.datavisyn-scatterplot-axis-right-label {
+    &.datavisyn-scatterplot-axis-left-label,
+    &.datavisyn-scatterplot-axis-bottom-label,
+    &.datavisyn-scatterplot-axis-right-label {
       pointer-events: none;
       user-select: none;
       text-align: center;
@@ -52,11 +56,11 @@
       bottom: 0;
     }
 
-    &.datavisyn-scatterplot-axis-left-label, &.datavisyn-scatterplot-axis-right-label {
+    &.datavisyn-scatterplot-axis-left-label,
+    &.datavisyn-scatterplot-axis-right-label {
       display: flex;
       justify-content: center;
       align-items: center;
-
       width: 1em;
       white-space: nowrap;
 
@@ -73,14 +77,16 @@
     }
   }
 
-  //similar to bootstrap tooltip
+  /*
+   * similar to bootstrap tooltip
+   */
+
   .datavisyn-scatterplot-tooltip {
     display: none;
     position: absolute;
     width: auto;
     height: auto;
     z-index: 4;
-
     padding: 5px 0;
 
     > :first-child {
@@ -109,6 +115,7 @@
 .datavisyn-scatterplot-minimap {
   position: relative;
   background-color: gray;
+
   svg {
     width: 100%;
     height: 100%;

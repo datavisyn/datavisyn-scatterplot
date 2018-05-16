@@ -10,4 +10,4 @@
  */
 export const cssprefix = 'datavisyn-scatterplot';
 export const DEBUG = false;
-export const debuglog = DEBUG ? console.log: ()=>undefined;
+export const debuglog = DEBUG ? console.log: () => undefined;

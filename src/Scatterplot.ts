@@ -9,7 +9,6 @@ import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
 import {quadtree, Quadtree} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
-import merge from './merge';
 import {
   hasOverlap,
   IBoundsPredicate,
@@ -28,25 +27,10 @@ import AScatterplot, {
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
-function defaultProps<T>(): IScatterplotOptions<T> {
-  return {
-    x: (d) => (<any>d).x,
-    y: (d) => (<any>d).y,
-
-    xlabel: 'x',
-    ylabel: 'y',
-
-    xscale: <IScale>scaleLinear().domain([0, 100]),
-    yscale: <IScale>scaleLinear().domain([0, 100]),
-
-    symbol: 'o',
-  };
-}
-
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class Scatterplot<T> extends AScatterplot<T> {
+export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<T>> {
 
   protected readonly normalized2pixel: IScalesObject = {
     x: scaleLinear(),
@@ -54,10 +38,9 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   };
 
   private readonly renderer: ISymbol<T>;
-  protected props: IScatterplotOptions<T>;
 
-  constructor(data: T[], root: HTMLElement, props: IScatterplotOptions<T>) {
-    super(data, root, merge(defaultProps(), props));
+  constructor(data: T[], root: HTMLElement, props?: Partial<IScatterplotOptions<T>>) {
+    super(root, props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
 
@@ -69,7 +52,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
 
     this.setDataImpl(data);
 
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+    this.selectionTree = quadtree([], this.tree!.x(), this.tree!.y());
 
     this.initDOM();
 
@@ -95,11 +78,11 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       return this.resized();
     }
 
-    const c = this.canvasDataLayer,
-      margin = this.props.margin,
-      bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
-      boundsWidth = bounds.x1 - bounds.x0,
-      boundsHeight = bounds.y1 - bounds.y0;
+    const c = this.canvasDataLayer!;
+    const margin = this.props.margin;
+    const bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom};
+    const boundsWidth = bounds.x1 - bounds.x0;
+    const boundsHeight = bounds.y1 - bounds.y0;
 
     // emit render reason as string
     this.emit(Scatterplot.EVENT_RENDER, ERenderReason[reason], transformDelta);
@@ -115,8 +98,8 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     const { x: xscale, y:  yscale} = this.transformedScales();
 
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
-    const nx = (v) => n2pX.invert(v),
-      ny = (v) => n2pY.invert(v);
+    const nx = (v: number) => n2pX.invert(v);
+    const ny = (v: number) => n2pY.invert(v);
     //inverted y scale
     const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
 
@@ -127,7 +110,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
     const border = this.props.margin.canvasBorder;
 
     const renderCtx = (isSelection = false) => {
-      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
+      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer)!.getContext('2d')!;
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
       ctx.rect(bounds.x0 - border, bounds.y0 - border, boundsWidth + border * 2, boundsHeight + border * 2);
@@ -138,15 +121,15 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
 
-      if (!isSelection && this.hasBackground()) {
+      if (!isSelection && this.props.renderBackground != null) {
         ctx.save();
         this.props.renderBackground(ctx, xscale, yscale);
         ctx.restore();
       }
 
-      this.renderTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug);
+      this.renderTree(ctx, tree!, renderer, xscale, yscale, isNodeVisible, debug);
 
-      if (isSelection && this.hasExtras()) {
+      if (isSelection && this.props.extras != null) {
         ctx.save();
         this.props.extras(ctx, xscale, yscale);
         ctx.restore();
@@ -156,7 +139,7 @@ export default class Scatterplot<T> extends AScatterplot<T> {
       return ctx;
     };
 
-    const renderSelection = !this.isSelectAble() && !this.hasExtras() ? () => undefined : () => {
+    const renderSelection = !this.isSelectAble() && this.props.extras == null ? () => undefined : () => {
         const ctx = renderCtx(true);
         this.lasso.render(ctx);
       };
@@ -206,13 +189,13 @@ export default class Scatterplot<T> extends AScatterplot<T> {
   }
 
   protected renderAxes(xscale: IScale, yscale: IScale) {
-    const left = axisLeft(yscale),
-      bottom = axisBottom(xscale),
-      $parent = select(this.parent);
+    const left = axisLeft(yscale);
+    const bottom = axisBottom(xscale);
+    const $parent = select(this.parent);
     this.setAxisFormat(left, 'y');
     this.setAxisFormat(bottom, 'x');
-    $parent.select(`.${cssprefix}-axis-left > g`).call(left);
-    $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
+    $parent.select<SVGGElement>(`.${cssprefix}-axis-left > g`).call(left);
+    $parent.select<SVGGElement>(`.${cssprefix}-axis-bottom > g`).call(bottom);
   }
 
   private renderTree(ctx: CanvasRenderingContext2D, tree: Quadtree<T>, renderer: ISymbolRenderer<T>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, debug = false) {
