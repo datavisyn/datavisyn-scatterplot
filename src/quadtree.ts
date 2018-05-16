@@ -38,7 +38,7 @@ export function ellipseTester(cx: number, cy: number, radiusX: number, radiusY: 
  * finds all items using a tester
  * @param tree
  * @param tester
- * @returns {Array}
+ * @returns {T[]}
  */
 export function findByTester<T>(tree:Quadtree<T>, tester:ITester):T[] {
   const r: T[] = [];
@@ -132,7 +132,7 @@ export function hasOverlap(ox0:number, oy0:number, ox1:number, oy1:number):IBoun
 /**
  * returns the data in the sub tree
  * @param node
- * @returns {Array}
+ * @returns {T[]}
  */
 export function getTreeData<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):T[] {
   const r: T[] = [];
