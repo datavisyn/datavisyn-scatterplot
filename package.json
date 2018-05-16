@@ -24,16 +24,15 @@
   },
   "main": "build/scatterplot.js",
   "jsnext:main": "build/scatterplot.js",
-  "module": "build/scatterplot.js",
+  "module": "src/index.js",
   "unpkg": "build/scatterplot.js",
-  "types": "build/typings/index.d.ts",
+  "types": "src/index.d.ts",
   "files": [
     "build",
     "!build/docs",
     "!build/demo",
-    "src/**/*.ts",
-    "src/assets/**/",
-    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "src/**/*.js",
     "src/**/*.scss"
   ],
   "scripts": {
@@ -70,7 +69,6 @@
     "@types/jasmine": "^2.8.7",
     "cache-loader": "^1.2.2",
     "css-loader": "^0.28.11",
-    "extract-text-webpack-plugin": "^4.0.0-beta.0",
     "file-loader": "^1.1.11",
     "fork-ts-checker-webpack-plugin": "^0.4.1",
     "jasmine": "^3.1.0",
