@@ -112,7 +112,7 @@ export interface IMarginOptions {
 /**
  * scatterplot options
  */
-export interface IScatterplotOptions<T> extends IMarginOptions, IZoomOptions{
+export interface IScatterplotOptions<T> extends IMarginOptions, IZoomOptions {
   format: IFormatOptions;
 
   /**
