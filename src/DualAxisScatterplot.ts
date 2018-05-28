@@ -243,7 +243,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
       return ctx;
     };
 
-    const renderSelection = !this.isSelectAble() && this.props.extras == null ? () => undefined : () => {
+    const renderSelection = typeof this.props.isSelectEvent !== 'function' && this.props.extras == null ? () => undefined : () => {
         const ctx = renderCtx(true);
         this.lasso.render(ctx);
       };

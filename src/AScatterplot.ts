@@ -208,7 +208,7 @@ export interface IScatterplotOptions<T> {
    * default: event.ctrlKey || event.altKey
    *
    */
-  isSelectEvent(event: MouseEvent): boolean; //=> event.ctrlKey || event.altKey
+  isSelectEvent: ((event: MouseEvent) => boolean) | null | false;
 
   /**
    * lasso options
@@ -394,7 +394,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
         .on('end', this.onZoomEnd.bind(this))
         .scaleExtent(zoom.scaleExtent)
         .translateExtent([[0, 0], [+Infinity, +Infinity]])
-        .filter(() => d3event.button === 0 && (!this.isSelectAble() || !this.props.isSelectEvent(<MouseEvent>d3event)));
+        .filter(() => d3event.button === 0 && (typeof this.props.isSelectEvent !== 'function' || !this.props.isSelectEvent(<MouseEvent>d3event)));
       if (zoom.window != null) {
         this.window = zoom.window;
       } else {
@@ -405,13 +405,13 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       this.zoomBehavior = null;
     }
 
-    if (this.isSelectAble()) {
+    if (typeof this.props.isSelectEvent === 'function') {
       const drag = d3drag<HTMLElement, null>()
         .container(function(this: any) { return this; })
         .on('start', this.onDragStart.bind(this))
         .on('drag', this.onDrag.bind(this))
         .on('end', this.onDragEnd.bind(this))
-        .filter(() => d3event.button === 0 && this.props.isSelectEvent(<MouseEvent>d3event));
+        .filter(() => d3event.button === 0 && typeof this.props.isSelectEvent === 'function' && this.props.isSelectEvent(<MouseEvent>d3event));
       $parent.call(drag)
         .on('click', () => this.onClick(d3event));
     }
@@ -431,7 +431,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     //init dom
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
-      <canvas class="${cssprefix}-selection-layer" ${!this.isSelectAble() && this.props.extras == null ? 'style="visibility: hidden"' : ''}></canvas>
+      <canvas class="${cssprefix}-selection-layer" ${typeof this.props.isSelectEvent !== 'function' && this.props.extras == null ? 'style="visibility: hidden"' : ''}></canvas>
       <div class="${cssprefix}-draw-area"  style="left: ${this.props.margin.left}px; right: ${this.props.margin.right}px; top: ${this.props.margin.top}px; bottom: ${this.props.margin.bottom}px"></div>
       <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
         <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
@@ -483,10 +483,6 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     };
   }
 
-  protected isSelectAble() {
-    return this.props.isSelectEvent != null && (<any>this.props.isSelectEvent) !== false;
-  }
-
   protected hasTooltips() {
     return this.props.showTooltip != null && (<any>this.props.showTooltip) !== false;
   }
@@ -529,7 +525,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
    * returns the current selection
    */
   get selection() {
-    if (!this.isSelectAble()) {
+    if (typeof this.props.isSelectEvent !== 'function') {
       return [];
     }
     return this.selectionTree!.data();
@@ -544,7 +540,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
   setSelection(selection: T[]): boolean {
-    if (!this.isSelectAble()) {
+    if (typeof this.props.isSelectEvent !== 'function') {
       return false;
     }
     if (selection == null) {
@@ -594,7 +590,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
    * @param items
    */
   addToSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
+    if (items.length === 0 || typeof this.props.isSelectEvent !== 'function') {
       return false;
     }
     this.selectionTree!.addAll(items);
@@ -608,7 +604,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
    * @param items
    */
   removeFromSelection(items: T[]) {
-    if (items.length === 0 || !this.isSelectAble()) {
+    if (items.length === 0 || typeof this.props.isSelectEvent !== 'function') {
       return false;
     }
     this.selectionTree!.removeAll(items);
