@@ -676,6 +676,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const $zoom = select(this.parent);
     this.zoomBehavior.scaleTo($zoom, k);
     this.zoomBehavior.translateBy($zoom, tx, ty);
+    this.node.classList.toggle(`${EScaleAxes[this.props.zoom.scale]}-zoomed`, this.isZoomed());
     this.render();
   }
 
@@ -720,6 +721,10 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     this.zoomStartTransform = this.currentTransform;
   }
 
+  private isZoomed() {
+    return this.currentTransform.k !== 1;
+  }
+
   private onZoom() {
     const evt = <D3ZoomEvent<any, any>>d3event;
     const newValue: ZoomTransform = evt.transform;
@@ -752,6 +757,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const end = this.currentTransform;
     const tchanged = (start.x !== end.x || start.y !== end.y);
     const schanged = (start.k !== end.k);
+    this.node.classList.toggle(`${EScaleAxes[this.props.zoom.scale]}-zoomed`, this.isZoomed());
     if (tchanged && schanged) {
       this.render(ERenderReason.AFTER_SCALE_AND_TRANSLATE);
     } else if (schanged) {
