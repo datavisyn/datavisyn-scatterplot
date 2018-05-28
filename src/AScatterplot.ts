@@ -71,58 +71,48 @@ export interface IZoomOptions {
   /**
    * delay before a full redraw is shown during zooming
    */
-  delay: number;
+  zoomDelay: number;
   /**
    * min max scaling factor
    * default: 0.1, 10
    */
-  scaleExtent: [number, number];
+  zoomScaleExtent: [number, number];
 
   /**
    * initial zoom window
    */
-  window: IWindow|null;
+  zoomWindow: IWindow|null;
 
   /**
    * initial scale factor
    */
-  scaleTo: number;
+  zoomScaleTo: number;
   /**
    * initial translate
    */
-  translateBy: [number, number];
+  zoomTranslateBy: [number, number];
 }
 
 export interface IFormatOptions {
-  /**
-   * d3 format used for formatting the x axis
-   */
-  x: string | ((n: number) => string) | null;
-  /**
-   * d3 format used for formatting the y axis
-   */
-  y: string | ((n: number) => string) | null;
+  [key: string]: string | ((n: number) => string) | null;
+}
+
+/**
+ * margin for the scatterplot area
+ * default (left=40, top=10, right=10, bottom=20)
+ */
+export interface IMarginOptions {
+  marginLeft: number;
+  marginTop: number;
+  marginRight: number;
+  marginBottom: number;
+  canvasBorder: number;
 }
 
 /**
  * scatterplot options
  */
-
-export interface IScatterplotOptions<T> {
-  /**
-   * margin for the scatterplot area
-   * default (left=40, top=10, right=10, bottom=20)
-   */
-  margin: {
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-    canvasBorder: number;
-  };
-
-  zoom: IZoomOptions;
-
+export interface IScatterplotOptions<T> extends IMarginOptions, IZoomOptions{
   format: IFormatOptions;
 
   /**
@@ -213,12 +203,12 @@ export interface IScatterplotOptions<T> {
   /**
    * lasso options
    */
-  lasso: ILassoOptions & {
+  lasso: Partial<ILassoOptions & {
     /**
      * lasso update frequency to improve performance
      */
     interval: number
-  };
+  }>;
 
   /**
    * additional render elements, e.g. lines
@@ -285,13 +275,11 @@ export interface ITransformDelta {
 
 function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
   return {
-    margin: {
-      left: 48,
-      top: 10,
-      bottom: 32,
-      right: 10,
-      canvasBorder: 0
-    },
+    marginLeft: 48,
+    marginTop: 10,
+    marginBottom: 32,
+    marginRight: 10,
+    canvasBorder: 0,
     clickRadius: 10,
 
     x: (d) => (<any>d).x,
@@ -307,19 +295,14 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 
     symbol: 'o',
 
-    zoom: {
-      scale: EScaleAxes.xy,
-      delay: 300,
-      scaleExtent: [1, +Infinity],
-      window: null,
-      scaleTo: 1,
-      translateBy: [0, 0],
-    },
+    scale: EScaleAxes.xy,
+    zoomDelay: 300,
+    zoomScaleExtent: [1, +Infinity],
+    zoomWindow: null,
+    zoomScaleTo: 1,
+    zoomTranslateBy: [0, 0],
 
-    format: {
-      x: null,
-      y: null
-    },
+    format: {},
 
     tooltipDelay: 500,
 
@@ -384,22 +367,20 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const $parent = select<HTMLElement, null>(this.parent);
     root.appendChild(this.parent);
 
-    if (this.props.zoom.scale !== null) {
-      const zoom = this.props.zoom;
-
+    if (this.props.scale !== null) {
       //register zoom
       this.zoomBehavior = d3zoom<HTMLElement, any>()
         .on('start', this.onZoomStart.bind(this))
         .on('zoom', this.onZoom.bind(this))
         .on('end', this.onZoomEnd.bind(this))
-        .scaleExtent(zoom.scaleExtent)
+        .scaleExtent(this.props.zoomScaleExtent)
         .translateExtent([[0, 0], [+Infinity, +Infinity]])
         .filter(() => d3event.button === 0 && (typeof this.props.isSelectEvent !== 'function' || !this.props.isSelectEvent(<MouseEvent>d3event)));
-      if (zoom.window != null) {
-        this.window = zoom.window;
+      if (this.props.zoomWindow != null) {
+        this.window = this.props.zoomWindow;
       } else {
-        this.zoomBehavior.scaleTo($parent, zoom.scaleTo);
-        this.zoomBehavior.translateBy($parent, zoom.translateBy[0], zoom.translateBy[1]);
+        this.zoomBehavior.scaleTo($parent, this.props.zoomScaleTo);
+        this.zoomBehavior.translateBy($parent, this.props.zoomTranslateBy[0], this.props.zoomTranslateBy[1]);
       }
     } else {
       this.zoomBehavior = null;
@@ -432,15 +413,15 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     this.parent.innerHTML = `
       <canvas class="${cssprefix}-data-layer"></canvas>
       <canvas class="${cssprefix}-selection-layer" ${typeof this.props.isSelectEvent !== 'function' && this.props.extras == null ? 'style="visibility: hidden"' : ''}></canvas>
-      <div class="${cssprefix}-draw-area"  style="left: ${this.props.margin.left}px; right: ${this.props.margin.right}px; top: ${this.props.margin.top}px; bottom: ${this.props.margin.bottom}px"></div>
-      <svg class="${cssprefix}-axis-left" style="width: ${this.props.margin.left + 2}px;">
-        <g transform="translate(${this.props.margin.left},${this.props.margin.top})"><g>
+      <div class="${cssprefix}-draw-area"  style="left: ${this.props.marginLeft}px; right: ${this.props.marginRight}px; top: ${this.props.marginTop}px; bottom: ${this.props.marginBottom}px"></div>
+      <svg class="${cssprefix}-axis-left" style="width: ${this.props.marginLeft + 2}px;">
+        <g transform="translate(${this.props.marginLeft},${this.props.marginTop})"><g>
       </svg>
-      <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.margin.bottom}px;">
-        <g transform="translate(${this.props.margin.left},0)"><g>
+      <svg class="${cssprefix}-axis-bottom" style="height: ${this.props.marginBottom}px;">
+        <g transform="translate(${this.props.marginLeft},0)"><g>
       </svg>
-      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.margin.left + 2}px; right: ${this.props.margin.right}px"><div>${this.props.xlabel}</div></div>
-      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px"><div>${this.props.ylabel}</div></div>
+      <div class="${cssprefix}-axis-bottom-label" style="left: ${this.props.marginLeft + 2}px; right: ${this.props.marginRight}px"><div>${this.props.xlabel}</div></div>
+      <div class="${cssprefix}-axis-left-label"  style="top: ${this.props.marginTop + 2}px; bottom: ${this.props.marginBottom}px"><div>${this.props.ylabel}</div></div>
       ${extraMarkup}
     `;
 
@@ -502,7 +483,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       //compute the data domain radius based on xscale and the scaling factor
       const view = this.props.clickRadius;
       const transform = this.currentTransform;
-      const scale = this.props.zoom.scale;
+      const scale = this.props.scale;
       const kX = (scale === EScaleAxes.x || scale === EScaleAxes.xy) ? transform.k : 1;
       const kY = (scale === EScaleAxes.y || scale === EScaleAxes.xy) ? transform.k : 1;
       const viewSizeX = kX * range(this.normalized2pixel.x.range());
@@ -635,8 +616,8 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       return;
     }
 
-    const availableWidth = this.canvasDataLayer!.width - this.props.margin.left - this.props.margin.right;
-    const availableHeight = this.canvasDataLayer!.height - this.props.margin.top - this.props.margin.bottom;
+    const availableWidth = this.canvasDataLayer!.width - this.props.marginLeft - this.props.marginRight;
+    const availableHeight = this.canvasDataLayer!.height - this.props.marginTop - this.props.marginBottom;
     this.zoomBehavior
       .extent([[0, 0], [availableWidth, availableHeight]])
       .translateExtent([[0, 0], [availableWidth, availableHeight]]);
@@ -644,7 +625,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   protected rescale(axis: EScaleAxes, scale: IScale) {
     const c = this.currentTransform;
-    const p = this.props.zoom.scale;
+    const p = this.props.scale;
     switch (axis) {
       case EScaleAxes.x:
         return p === EScaleAxes.x || p === EScaleAxes.xy ? c.rescaleX(scale) : scale;
@@ -657,7 +638,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   protected mousePosAtCanvas() {
     const pos = mouse(this.parent);
     // shift by the margin since the scales doesn't include them for better scaling experience
-    return [pos[0] - this.props.margin.left, pos[1] - this.props.margin.top];
+    return [pos[0] - this.props.marginLeft, pos[1] - this.props.marginTop];
   }
 
   /**
@@ -672,7 +653,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const $zoom = select(this.parent);
     this.zoomBehavior.scaleTo($zoom, k);
     this.zoomBehavior.translateBy($zoom, tx, ty);
-    this.node.classList.toggle(`${EScaleAxes[this.props.zoom.scale]}-zoomed`, this.isZoomed());
+    this.node.classList.toggle(`${EScaleAxes[this.props.scale]}-zoomed`, this.isZoomed());
     this.render();
   }
 
@@ -683,7 +664,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
       return {k, t: (scale.range()[0] - pmin)};
     };
-    const s = this.props.zoom.scale;
+    const s = this.props.scale;
     const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
     const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
     let k = 1;
@@ -726,7 +707,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const newValue: ZoomTransform = evt.transform;
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
-    const scale = this.props.zoom.scale;
+    const scale = this.props.scale;
     const tchanged = ((scale !== EScaleAxes.y && oldValue.x !== newValue.x) || (scale !== EScaleAxes.x && oldValue.y !== newValue.y));
     const schanged = (oldValue.k !== newValue.k);
     const delta = {
@@ -753,7 +734,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const end = this.currentTransform;
     const tchanged = (start.x !== end.x || start.y !== end.y);
     const schanged = (start.k !== end.k);
-    this.node.classList.toggle(`${EScaleAxes[this.props.zoom.scale]}-zoomed`, this.isZoomed());
+    this.node.classList.toggle(`${EScaleAxes[this.props.scale]}-zoomed`, this.isZoomed());
     if (tchanged && schanged) {
       this.render(ERenderReason.AFTER_SCALE_AND_TRANSLATE);
     } else if (schanged) {
@@ -798,7 +779,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   private retestLasso() {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     // shift by the margin since the scales doesn't include them for better scaling experience
-    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.margin.left, -this.props.margin.top);
+    const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.marginLeft, -this.props.marginTop);
     return tester && this.selectWithTester(tester);
   }
 
@@ -820,7 +801,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     const items = findByTester(this.tree!, tester);
     // canvas pos doesn't include the margin
-    this.props.showTooltip(this.parent, items, canvasPos[0] + this.props.margin.left, canvasPos[1] + this.props.margin.top, event);
+    this.props.showTooltip(this.parent, items, canvasPos[0] + this.props.marginLeft, canvasPos[1] + this.props.marginTop, event);
     this.showTooltipHandle = -1;
   }
 

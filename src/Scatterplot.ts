@@ -40,7 +40,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
   private readonly renderer: ISymbol<T>;
 
   constructor(data: T[], root: HTMLElement, props?: Partial<IScatterplotOptions<T>>) {
-    super(root, props);
+    super(root, <any>props);
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
 
@@ -79,8 +79,8 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
     }
 
     const c = this.canvasDataLayer!;
-    const margin = this.props.margin;
-    const bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom};
+    const {marginLeft, marginTop, marginRight, marginBottom} = this.props;
+    const bounds = {x0: marginLeft, y0: marginTop, x1: c.clientWidth - marginRight, y1: c.clientHeight - marginBottom};
     const boundsWidth = bounds.x1 - bounds.x0;
     const boundsHeight = bounds.y1 - bounds.y0;
 
@@ -107,7 +107,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
       zoomLevel: this.currentTransform.k
     };
 
-    const border = this.props.margin.canvasBorder;
+    const border = this.props.canvasBorder;
 
     const renderData = (isSelection = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer)!.getContext('2d')!;
@@ -163,7 +163,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();

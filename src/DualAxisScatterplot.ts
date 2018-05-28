@@ -116,7 +116,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
   private readonly secondaryRenderer: ISymbol<U>;
 
   constructor(data: T[], secondaryData: U[], root: HTMLElement, props: Partial<IDualAxisScatterplotOptions<T,U>> = {}) {
-    super(root, Object.assign(defaultProps<T,U>(), props));
+    super(root, <any>Object.assign(defaultProps<T,U>(), props));
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
     this.props.y2scale = fixScale(this.props.y2scale, this.props.y2, secondaryData, props ? props.y2scale : null, props ? props.y2lim : null);
@@ -135,10 +135,10 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
     this.selectionTree = quadtree([], this.tree!.x(), this.tree!.y());
 
     this.initDOM(`
-      <svg class="${cssprefix}-axis-right" style="width: ${this.props.margin.left + 2}px; right: 0">
-        <g transform="translate(0,${this.props.margin.top})"><g>
+      <svg class="${cssprefix}-axis-right" style="width: ${this.props.marginLeft + 2}px; right: 0">
+        <g transform="translate(0,${this.props.marginTop})"><g>
       </svg>
-      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
+      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.marginTop + 2}px; bottom: ${this.props.marginBottom}px; right: 0"><div>${this.props.y2label}</div></div>
     `);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
@@ -177,8 +177,8 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
     }
 
     const c = this.canvasDataLayer!;
-    const margin = this.props.margin;
-    const bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom};
+    const {marginLeft, marginBottom, marginRight, marginTop} = this.props;
+    const bounds = {x0: marginLeft, y0: marginTop, x1: c.clientWidth - marginRight, y1: c.clientHeight - marginBottom};
     const boundsWidth = bounds.x1 - bounds.x0;
     const boundsHeight = bounds.y1 - bounds.y0;
 
@@ -210,7 +210,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
       zoomLevel: this.currentTransform.k
     };
 
-    const border = this.props.margin.canvasBorder;
+    const border = this.props.canvasBorder;
 
     const renderCtx = (isSelection = false, isSecondary = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer)!.getContext('2d')!;
@@ -269,7 +269,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
