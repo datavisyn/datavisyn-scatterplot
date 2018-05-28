@@ -109,7 +109,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
 
     const border = this.props.margin.canvasBorder;
 
-    const renderCtx = (isSelection = false) => {
+    const renderData = (isSelection = false) => {
       const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer)!.getContext('2d')!;
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.save();
@@ -140,12 +140,11 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
     };
 
     const renderSelection = typeof this.props.isSelectEvent !== 'function' && this.props.extras == null ? () => undefined : () => {
-        const ctx = renderCtx(true);
+        const ctx = renderData(true);
         this.lasso.render(ctx);
       };
 
     const renderAxes = this.renderAxes.bind(this, xscale, yscale);
-    const renderData = renderCtx.bind(this, false);
 
     const clearAutoZoomRedraw = () => {
       if (this.zoomHandle >= 0) {
