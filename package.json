@@ -31,8 +31,7 @@
     "build",
     "!build/docs",
     "!build/demo",
-    "src/**/*.d.ts",
-    "src/**/*.js",
+    "src/**/*.ts",
     "src/**/*.scss"
   ],
   "scripts": {
