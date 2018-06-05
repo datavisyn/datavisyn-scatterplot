@@ -160,8 +160,8 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
       case ERenderReason.PERFORM_TRANSLATE:
         clearAutoZoomRedraw();
         this.transformData(c, bounds, boundsWidth, boundsHeight, transformDelta.x, transformDelta.y, transformDelta.kx, transformDelta.ky);
-        renderSelection();
         renderAxes();
+        renderSelection();
         //redraw everything after a while, i.e stopped moving
         this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
         break;
