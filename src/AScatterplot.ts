@@ -327,6 +327,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
 
   static EVENT_SELECTION_CHANGED = 'selectionChanged';
+  static EVENT_SELECTION_IN_PROGRESS_CHANGED = 'selectionInProgressChanged';
   static EVENT_RENDER = 'render';
   static EVENT_WINDOW_CHANGED = 'windowChanged';
 
@@ -521,6 +522,10 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
   setSelection(selection: T[]): boolean {
+    return this.setSelectionImpl(selection);
+  }
+
+  private setSelectionImpl(selection: T[], inProgress = false): boolean {
     if (typeof this.props.isSelectEvent !== 'function') {
       return false;
     }
@@ -529,7 +534,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     //this.lasso.clear();
     if (selection.length === 0) {
-      return this.clearSelection();
+      return this.clearSelectionImpl(inProgress);
     }
     //find the delta
     let changed = false;
@@ -547,7 +552,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     //remove removed items
     this.selectionTree!.removeAll(s);
     if (changed) {
-      this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
+      this.emit(inProgress ? AScatterplot.EVENT_SELECTION_IN_PROGRESS_CHANGED : AScatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
@@ -557,10 +562,14 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
    * clears the selection, same as .selection=[]
    */
   clearSelection(): boolean {
+    return this.clearSelection();
+  }
+
+  private clearSelectionImpl(inProgress = false): boolean {
     const changed = this.selectionTree !== null && this.selectionTree.size() > 0;
     if (changed) {
       this.selectionTree = quadtree([], this.tree!.x(), this.tree!.y());
-      this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
+      this.emit(inProgress ? AScatterplot.EVENT_SELECTION_IN_PROGRESS_CHANGED : AScatterplot.EVENT_SELECTION_CHANGED, this);
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     return changed;
@@ -595,9 +604,9 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
 
-  protected selectWithTester(tester: ITester) {
+  protected selectWithTester(tester: ITester, inProgress = false) {
     const selection = findByTester(this.tree!, tester);
-    return this.setSelection(selection);
+    return this.setSelectionImpl(selection, inProgress);
   }
 
   protected checkResize() {
@@ -746,7 +755,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   private onDragStart() {
     this.lasso.start(d3event.x, d3event.y);
-    if (!this.clearSelection()) {
+    if (!this.clearSelectionImpl(true)) {
       this.render(ERenderReason.SELECTION_CHANGED);
     }
   }
@@ -774,13 +783,14 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       this.render(ERenderReason.SELECTION_CHANGED);
     }
     this.lasso.clear();
+    this.emit(AScatterplot.EVENT_SELECTION_CHANGED, this);
   }
 
   private retestLasso() {
     const {n2pX, n2pY} = this.transformedNormalized2PixelScales();
     // shift by the margin since the scales doesn't include them for better scaling experience
     const tester = this.lasso.tester(n2pX.invert.bind(n2pX), n2pY.invert.bind(n2pY), -this.props.marginLeft, -this.props.marginTop);
-    return tester && this.selectWithTester(tester);
+    return tester && this.selectWithTester(tester, true);
   }
 
   private onClick(event: MouseEvent) {
