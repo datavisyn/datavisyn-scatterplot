@@ -711,9 +711,15 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     return this.currentTransform.k !== 1;
   }
 
+
+  private shiftTransform(t: ZoomTransform) {
+    // zoom transform is over the whole canvas an not just the center part in which the scales are defined
+    return t;
+  }
+
   private onZoom() {
     const evt = <D3ZoomEvent<any, any>>d3event;
-    const newValue: ZoomTransform = evt.transform;
+    const newValue: ZoomTransform = this.shiftTransform(evt.transform);
     const oldValue = this.currentTransform;
     this.currentTransform = newValue;
     const scale = this.props.scale;
