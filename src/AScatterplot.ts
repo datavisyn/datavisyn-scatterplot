@@ -96,6 +96,9 @@ export interface IZoomOptions {
 export interface IFormatOptions {
   [key: string]: string | ((n: number) => string) | null;
 }
+export interface ITickOptions {
+  [key: string]: number[] | ((s: IScale) => number[]) | null;
+}
 
 /**
  * margin for the scatterplot area
@@ -114,6 +117,7 @@ export interface IMarginOptions {
  */
 export interface IScatterplotOptions<T> extends IMarginOptions, IZoomOptions {
   format: IFormatOptions;
+  ticks: ITickOptions;
 
   /**
    * x accessor of the data
@@ -303,6 +307,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
     zoomTranslateBy: [0, 0],
 
     format: {},
+    ticks: {},
 
     tooltipDelay: 500,
 
@@ -878,11 +883,14 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
   protected setAxisFormat(axis: Axis<number>, key: keyof IFormatOptions) {
-    const p = this.props.format[key];
-    if (p == null) {
-      return;
+    const f = this.props.format[key];
+    if (f != null) {
+      axis.tickFormat(typeof f === 'string' ? format(f) : f);
     }
-    axis.tickFormat(typeof p === 'string' ? format(p) : p);
+    const t = this.props.ticks[key];
+    if (t != null) {
+      axis.tickValues(Array.isArray(t) ? t : t(axis.scale()));
+    }
   }
 
   protected transformData(c: HTMLCanvasElement, bounds: IBoundsObject, boundsWidth: number, boundsHeight: number, x: number, y: number, kx: number, ky: number) {
