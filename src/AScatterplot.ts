@@ -329,7 +329,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
+abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter<string> {
 
   static EVENT_SELECTION_CHANGED = 'selectionChanged';
   static EVENT_SELECTION_IN_PROGRESS_CHANGED = 'selectionInProgressChanged';
