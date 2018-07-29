@@ -889,7 +889,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const t = this.props.ticks[key];
     if (t != null) {
-      axis.tickValues(Array.isArray(t) ? t : t(axis.scale()));
+      axis.tickValues(Array.isArray(t) ? t : t(<IScale>axis.scale()));
     }
   }
 
