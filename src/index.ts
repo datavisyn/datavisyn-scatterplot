@@ -14,6 +14,7 @@ export * from './Scatterplot';
 export {default as DualAxisScatterplot} from './DualAxisScatterplot';
 export * from './DualAxisScatterplot';
 export * from './AScatterplot';
+export {ISymbol, ERenderMode, ISymbolRenderer, IRenderInfo, IStyleSymbolOptions, ISymbolOptions} from './symbol';
 //export {default as MiniMap} from './MiniMap';
 
 /**
