@@ -6,8 +6,15 @@
 
 /**
  * css prefix and class of the root element
+ * @internal
  * @type {string}
  */
 export const cssprefix = 'datavisyn-scatterplot';
+/**
+ * @internal
+ */
 export const DEBUG = false;
+/**
+ * @internal
+ */
 export const debuglog = DEBUG ? console.log: () => undefined;

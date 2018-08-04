@@ -8,6 +8,7 @@
  * merges the second object into the first one
  * @param target
  * @param others
+ * @internal
  * @returns {T}
  */
 export default function merge<T extends any>(target:T, ...others:any[]) {

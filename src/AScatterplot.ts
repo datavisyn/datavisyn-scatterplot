@@ -259,6 +259,9 @@ export interface IWindow {
   yMinMax: IMinMax;
 }
 
+/**
+ * @internal
+ */
 export function fixScale<T>(current: IScale, acc: IAccessor<T>, data: (T)[], given: IScale|null|undefined, givenLimits: [number, number]|null|undefined) {
   if (given) {
     return given;

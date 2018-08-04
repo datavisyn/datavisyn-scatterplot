@@ -38,6 +38,9 @@ function toString(d: any) {
   return JSON.stringify(d);
 }
 
+/**
+ * @internal
+ */
 export default function showTooltip(parent: HTMLElement, items:any[], x:number, y:number) {
   const tooltip: HTMLElement = findTooltip(parent, items.length > 0);
   if (items.length === 0) {

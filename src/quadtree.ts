@@ -7,7 +7,13 @@
 import {Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {shuffle} from 'd3-array';
 
+/**
+ * @internal
+ */
 export const ABORT_TRAVERSAL = true;
+/**
+ * @internal
+ */
 export const CONTINUE_TRAVERSAL = false;
 
 export interface IBoundsPredicate {
@@ -19,6 +25,9 @@ export interface ITester {
   testArea: IBoundsPredicate;
 }
 
+/**
+ * @internal
+ */
 export function ellipseTester(cx: number, cy: number, radiusX: number, radiusY: number): ITester {
   const radiusX2 = radiusX * radiusX;
   const radiusY2 = radiusY * radiusY;
@@ -38,6 +47,7 @@ export function ellipseTester(cx: number, cy: number, radiusX: number, radiusY: 
  * finds all items using a tester
  * @param tree
  * @param tester
+ * @internal
  * @returns {T[]}
  */
 export function findByTester<T>(tree:Quadtree<T>, tester:ITester):T[] {
@@ -82,6 +92,7 @@ export function findByTester<T>(tree:Quadtree<T>, tester:ITester):T[] {
  * execute the callback for each item in the leaf
  * @param node
  * @param callback
+ * @internal
  * @returns {number}
  */
 export function forEachLeaf<T>(node:QuadtreeLeaf<T>, callback:(d:T)=>void) {
@@ -105,6 +116,7 @@ export function forEachLeaf<T>(node:QuadtreeLeaf<T>, callback:(d:T)=>void) {
  * for each data item in the subtree execute the callback
  * @param node
  * @param callback
+ * @internal
  */
 export function forEach<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T> | undefined, callback:(d:T)=>void) {
   if (!node) {
@@ -119,6 +131,9 @@ export function forEach<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T> | unde
   }
 }
 
+/**
+ * @internal
+ */
 export function hasOverlap(ox0:number, oy0:number, ox1:number, oy1:number):IBoundsPredicate {
   return (x0:number, y0:number, x1:number, y1:number) => {
     //if the 1er points are small than 0er or 0er bigger than 1er than outside
@@ -133,12 +148,17 @@ export function hasOverlap(ox0:number, oy0:number, ox1:number, oy1:number):IBoun
  * returns the data in the sub tree
  * @param node
  * @returns {T[]}
+ * @internal
  */
 export function getTreeData<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):T[] {
   const r: T[] = [];
   forEach(node, r.push.bind(r));
   return r;
 }
+
+/**
+ * @internal
+ */
 export function getTreeSize(node:QuadtreeInternalNode<any> | QuadtreeLeaf<any>) {
   let count = 0;
   forEach(node, () => count++);
@@ -150,6 +170,7 @@ export function getTreeSize(node:QuadtreeInternalNode<any> | QuadtreeLeaf<any>) 
  * @see http://stackoverflow.com/questions/10134237/javascript-random-integer-between-two-numbers
  * @param min
  * @param max
+ * @internal
  * @returns {number}
  */
 function getRandomInt (min: number, max: number) {
@@ -159,6 +180,7 @@ function getRandomInt (min: number, max: number) {
 /**
  * returns the first leaf node in the subtree
  * @param node
+ * @internal
  * @returns {any}
  */
 export function getFirstLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):T {
@@ -173,6 +195,7 @@ export function getFirstLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):
 /**
  * returns a random leaf node in the subtree
  * @param node
+ * @internal
  * @returns {any}
  */
 export function getRandomLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>):T {
@@ -190,6 +213,7 @@ export function getRandomLeaf<T>(node:QuadtreeInternalNode<T> | QuadtreeLeaf<T>)
 /**
  * checks whether the given node is a leaf node, as described in d3.quadtree docu
  * @param node
+ * @internal
  * @returns {boolean}
  */
 export function isLeafNode(node:QuadtreeInternalNode<any> | QuadtreeLeaf<any>) {

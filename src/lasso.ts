@@ -28,6 +28,9 @@ export interface ILassoOptions {
   dashedLine: {dashLength: number, gapLength: number};
 }
 
+/**
+ * @internal
+ */
 export function defaultOptions(): Readonly<ILassoOptions> {
   return {
     lineWidth: 2,

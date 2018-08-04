@@ -261,6 +261,7 @@ export function lineRenderer(params?: Partial<ILineSymbolOptions>) {
 /**
  * creates an parses a renderer
  * @param symbol
+ * @internal
  * @returns {any}
  */
 export function createRenderer<T>(symbol: ISymbol<T>|string): ISymbol<T> {
