@@ -57,7 +57,7 @@
     "build": "npm run build:prod",
     "watch": "webpack --mode development --watch --devtool source-map",
     "start": "webpack-dev-server --mode development --devtool source-map",
-    "predist": "npm run build && npm run docs",
+    "predist": "npm run build",
     "dist": "mkdirp dist && cd build && tar cvzf ../dist/scatterplot.tar.gz --exclude \"docs\" * && cd ..",
     "preversion": "npm test",
     "prepare": "echo 'dummy prepare since prepack has no dev dependencies'",
