@@ -1,6 +1,6 @@
 {
   "name": "datavisyn-scatterplot",
-  "version": "0.0.2-SNAPSHOT",
+  "version": "0.0.2",
   "description": "a canvas based scatterplot implementation",
   "homepage": "https://phovea.caleydo.org",
   "author": {
