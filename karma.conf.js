@@ -1,9 +1,3 @@
-/* *****************************************************************************
- * Caleydo - Visualization for Molecular Biology - http://caleydo.org
- * Copyright (c) The Caleydo Team. All rights reserved.
- * Licensed under the new BSD license, available at http://caleydo.org/license
- **************************************************************************** */
-
 const webpack = require('./webpack.config.js');
 
 module.exports = (config) => {
@@ -24,7 +18,7 @@ module.exports = (config) => {
       'tests.webpack.js': ['webpack', 'sourcemap']
     },
 
-    webpack: webpack('test'),
+    webpack: Object.assign({ mode: 'development' }, webpack('', { mode: 'development' })),
 
     failOnEmptyTestSuite: false,
 
@@ -43,7 +37,7 @@ module.exports = (config) => {
       // path: '<path>' // path to serve the polyfill script under, defaults to '/polyfill.js'
     },
 
-    browsers: [process.env.CONTINUOUS_INTEGRATION ? 'Firefox' : 'Chrome'],
+    browsers: ['Chrome'],
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits

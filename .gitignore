@@ -8,7 +8,7 @@
 *.log
 *.map
 src/**/*.js
-src/**/*.d.ts
 src/**/*.css
+src/**/*.d.ts
 /node_modules/
 .cache-loader

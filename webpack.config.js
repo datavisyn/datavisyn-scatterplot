@@ -1,6 +1,7 @@
 const resolve = require('path').resolve;
 const pkg = require('./package.json');
 const webpack = require('webpack');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 const now = new Date();
@@ -44,9 +45,13 @@ module.exports = (env, options) => {
       }),
       //define magic constants that are replaced
       new webpack.DefinePlugin({
+        __DEBUG__ : dev,
         __VERSION__: JSON.stringify(pkg.version),
         __LICENSE__: JSON.stringify(pkg.license),
         __BUILD_ID__: JSON.stringify(buildId)
+      }),
+      new ExtractTextPlugin({
+        filename: `[name].css`
       }),
       new ForkTsCheckerWebpackPlugin({
         checkSyntacticErrors: true
@@ -56,7 +61,10 @@ module.exports = (env, options) => {
     module: {
       rules: [{
           test: /\.s?css$/,
-          use: ['style-loader', 'css-loader', 'sass-loader']
+          use: ExtractTextPlugin.extract({
+            fallback: 'style-loader',
+            use: ['css-loader', 'sass-loader']
+          })
         },
         {
           test: /\.tsx?$/,
@@ -78,7 +86,7 @@ module.exports = (env, options) => {
                 happyPackMode: true // IMPORTANT! use happyPackMode mode to speed-up  compilation and reduce errors reported to webpack
               }
             }
-          ].slice(process.env.CI ? 2 : 0) // no optimizations for CIs
+          ].slice(process.env.CI || !dev ? 2 : 0) // no optimizations for CIs and in production mode
         },
         {
           test: /\.(png|jpg)$/,
