@@ -54,7 +54,7 @@
     "@types/d3-brush": "^1.0.6",
     "@types/d3-drag": "^1.0.5",
     "@types/d3-polygon": "^1.0.4",
-    "@types/d3-quadtree": "^1.0.4",
+    "@types/d3-quadtree": "1.0.4",
     "@types/d3-format": "^1.0.7",
     "@types/d3-scale": "^1.0.4",
     "@types/d3-shape": "^1.0.5",
