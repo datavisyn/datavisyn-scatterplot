@@ -388,8 +388,8 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       if (this.props.zoomWindow != null) {
         this.window = this.props.zoomWindow;
       } else {
-        this.zoomBehavior.scaleTo($parent, this.props.zoomScaleTo);
-        this.zoomBehavior.translateBy($parent, this.props.zoomTranslateBy[0], this.props.zoomTranslateBy[1]);
+        const z = zoomIdentity.scale(this.props.zoomScaleTo).translate(this.props.zoomTranslateBy[0], this.props.zoomTranslateBy[1]);
+        this.zoomBehavior.transform($parent, z);
       }
     } else {
       this.zoomBehavior = null;
@@ -668,8 +668,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const {k, tx, ty} = this.window2transform(window);
     const $zoom = select(this.parent);
-    this.zoomBehavior.scaleTo($zoom, k);
-    this.zoomBehavior.translateBy($zoom, tx, ty);
+    this.zoomBehavior.transform($zoom, zoomIdentity.scale(k).translate(tx, ty));
     this.node.classList.toggle(`${EScaleAxes[this.props.scale]}-zoomed`, this.isZoomed());
     this.render();
   }
