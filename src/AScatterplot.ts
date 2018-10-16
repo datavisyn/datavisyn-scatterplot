@@ -389,7 +389,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
         this.window = this.props.zoomWindow;
       } else {
         const z = zoomIdentity.scale(this.props.zoomScaleTo).translate(this.props.zoomTranslateBy[0], this.props.zoomTranslateBy[1]);
-        this.zoomBehavior.transform($parent, z);
+        this.setTransform(z);
       }
     } else {
       this.zoomBehavior = null;
@@ -667,10 +667,25 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       return;
     }
     const {k, tx, ty} = this.window2transform(window);
-    const $zoom = select(this.parent);
-    this.zoomBehavior.transform($zoom, this.currentTransform = zoomIdentity.scale(k).translate(tx, ty));
+    this.setTransform(zoomIdentity.scale(k).translate(tx, ty));
     this.node.classList.toggle(`${EScaleAxes[this.props.scale]}-zoomed`, this.isZoomed());
     this.render();
+  }
+
+  private setTransform(transform: ZoomTransform) {
+    if (!this.zoomBehavior) {
+      return;
+    }
+    const $zoom = select(this.parent).select<HTMLElement>(`.${cssprefix}-draw-area`);
+    this.zoomBehavior
+      .on('start', null)
+      .on('zoom', null)
+      .on('end', null);
+    this.zoomBehavior .transform($zoom, this.currentTransform = transform);
+    this.zoomBehavior
+      .on('start', this.onZoomStart.bind(this))
+      .on('zoom', this.onZoom.bind(this))
+      .on('end', this.onZoomEnd.bind(this));
   }
 
   private window2transform(window: IWindow) {
