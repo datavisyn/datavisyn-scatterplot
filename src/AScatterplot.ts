@@ -668,7 +668,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const {k, tx, ty} = this.window2transform(window);
     const $zoom = select(this.parent);
-    this.zoomBehavior.transform($zoom, zoomIdentity.scale(k).translate(tx, ty));
+    this.zoomBehavior.transform($zoom, this.currentTransform = zoomIdentity.scale(k).translate(tx, ty));
     this.node.classList.toggle(`${EScaleAxes[this.props.scale]}-zoomed`, this.isZoomed());
     this.render();
   }
