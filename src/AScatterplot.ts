@@ -338,6 +338,10 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   static EVENT_SELECTION_IN_PROGRESS_CHANGED = 'selectionInProgressChanged';
   static EVENT_RENDER = 'render';
   static EVENT_WINDOW_CHANGED = 'windowChanged';
+  static EVENT_MOUSE_CLICKED = 'mouseClicked';
+  static EVENT_DRAGGED = 'dragged';
+  static EVENT_MOUSE_MOVED = 'mouseMoved';
+  static EVENT_ZOOM_CHANGED = 'zoomChanged';
 
   protected canvasDataLayer: HTMLCanvasElement|null = null;
   protected canvasSelectionLayer: HTMLCanvasElement|null = null;
@@ -763,7 +767,8 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
       this.emit(AScatterplot.EVENT_WINDOW_CHANGED, this.window, this.transformedScales());
       this.render(ERenderReason.PERFORM_TRANSLATE, delta);
     }
-    //nothing if no changed
+    //nothing if no change
+    this.emit(AScatterplot.EVENT_ZOOM_CHANGED, d3event);
   }
 
   private onZoomEnd() {
@@ -794,6 +799,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
+    this.emit(AScatterplot.EVENT_DRAGGED, d3event);
   }
 
   private updateDrag() {
@@ -831,6 +837,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     //find closest data item
     const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
     this.selectWithTester(tester);
+    this.emit(AScatterplot.EVENT_MOUSE_CLICKED, event);
   }
 
   private showTooltip(canvasPos: [number, number], event: MouseEvent) {
@@ -850,6 +857,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     const pos = this.mousePosAtCanvas();
     //TODO find a more efficient way or optimize the timing
     this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos, event), this.props.tooltipDelay);
+    this.emit(AScatterplot.EVENT_MOUSE_MOVED, event);
   }
 
   private onMouseLeave(event: MouseEvent) {
