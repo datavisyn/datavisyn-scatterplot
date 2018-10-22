@@ -841,13 +841,16 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
   private showTooltip(canvasPos: [number, number], event: MouseEvent) {
-    //highlight selected item
-    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
-    const items = findByTester(this.tree!, tester);
+    const items = this.findItems(canvasPos);
     // canvas pos doesn't include the margin
     this.props.showTooltip(this.parent, items, canvasPos[0] + this.props.marginLeft, canvasPos[1] + this.props.marginTop, event);
     this.showTooltipHandle = -1;
+  }
+
+  findItems(canvasPos: [number, number]) {
+    const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
+    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    return findByTester(this.tree!, tester);
   }
 
   private onMouseMove(event: MouseEvent) {
