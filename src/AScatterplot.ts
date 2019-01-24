@@ -624,24 +624,43 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   protected checkResize() {
     const c = this.canvasDataLayer!;
     if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
+      const oldWidth = this.canvasSelectionLayer!.width;
+      const oldHeight = this.canvasSelectionLayer!.height;
       this.canvasSelectionLayer!.width = c.width = c.clientWidth;
       this.canvasSelectionLayer!.height = c.height = c.clientHeight;
-      this.adaptMaxTranslation();
+      this.adaptMaxTranslation(oldWidth, oldHeight);
       return true;
     }
     return false;
   }
 
-  private adaptMaxTranslation() {
+  /**
+   * adapt the current translation (is absolute in pixels) and consider if the dimensions of the canvas element have changed
+   */
+  private adaptMaxTranslation(oldWidth: number, oldHeight: number) {
     if (!this.zoomBehavior) {
       return;
     }
 
+
     const availableWidth = this.canvasDataLayer!.width - this.props.marginLeft - this.props.marginRight;
     const availableHeight = this.canvasDataLayer!.height - this.props.marginTop - this.props.marginBottom;
+
+    const oldAvailableWidth = oldWidth - this.props.marginLeft - this.props.marginRight;
+    const oldAvailableHeight = oldHeight - this.props.marginTop - this.props.marginBottom;
+
+    const current = this.currentTransform;
+
+    // compute factors to consider the element's new dimensions
+    const factorX = availableWidth / oldAvailableWidth;
+    const factorY = availableHeight / oldAvailableHeight;
+
     this.zoomBehavior
       .extent([[0, 0], [availableWidth, availableHeight]])
       .translateExtent([[0, 0], [availableWidth, availableHeight]]);
+
+    // set the new transform by considering the factors
+    this.setTransform(zoomIdentity.translate(current.x * factorX, current.y * factorY).scale(current.k));
   }
 
   protected rescale(axis: EScaleAxes, scale: IScale) {
