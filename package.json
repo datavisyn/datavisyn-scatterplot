@@ -67,10 +67,10 @@
     "release:pre": "npm version prerelease && npm publish --tag=next && git push --follow-tags"
   },
   "devDependencies": {
-    "@types/d3-format": "^1.3.0",
     "@types/d3-array": "^1.2.1",
     "@types/d3-brush": "^1.0.8",
     "@types/d3-drag": "^1.2.1",
+    "@types/d3-format": "^1.3.0",
     "@types/d3-polygon": "^1.0.6",
     "cache-loader": "^1.2.2",
     "css-loader": "^1.0.0",
@@ -110,7 +110,7 @@
     "url-loader": "^1.0.1",
     "webpack": "^4.16.4",
     "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5"
+    "webpack-dev-server": "^3.1.14"
   },
   "dependencies": {
     "@types/d3-scale": "^2.0.1",
