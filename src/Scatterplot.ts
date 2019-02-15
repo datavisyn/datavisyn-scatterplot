@@ -163,7 +163,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
         renderAxes();
         renderSelection();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
+        this.zoomHandle = window.setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
