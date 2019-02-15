@@ -16,14 +16,13 @@ import {
   SymbolType
 } from 'd3-shape';
 import {bisector as d3bisector} from 'd3-array';
-import merge from './merge';
 
 /**
  * a symbol renderer renderes a bunch of data points using `render` at the end `done` will be called
  */
 export interface ISymbolRenderer<T> {
-  render(x: number, y: number, d: T);
-  done();
+  render(x: number, y: number, d: T): void;
+  done(): void;
 }
 
 /**
@@ -55,13 +54,13 @@ export interface ISymbol<T> {
 }
 
 export interface IStyleSymbolOptions {
-  fillColor?: string;
-  hoverColor?: string;
-  selectedColor?: string;
+  fillColor: string;
+  hoverColor: string;
+  selectedColor: string;
 }
 
 export interface ISymbolOptions extends IStyleSymbolOptions {
-  symbolSize?: number;
+  symbolSize: number;
 }
 
 
@@ -103,13 +102,13 @@ export function d3Symbol(symbol: SymbolType = d3SymbolCircle, fillStyle: string 
 }
 
 
-const defaultStyleOptions: IStyleSymbolOptions = {
+const defaultStyleOptions: Readonly<IStyleSymbolOptions> = {
   fillColor: 'steelblue',
   selectedColor: 'red',
   hoverColor: 'orange'
 };
 
-const defaultOptions: ISymbolOptions = merge({
+const defaultOptions: Readonly<ISymbolOptions> = Object.assign({
   symbolSize: 20
 }, defaultStyleOptions);
 
@@ -120,8 +119,8 @@ const defaultOptions: ISymbolOptions = merge({
  * @returns {function(CanvasRenderingContext2D): undefined}
  */
 
-export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+export function circleSymbol(params?: Partial<ISymbolOptions>): ISymbol<any> {
+  const options: ISymbolOptions = Object.assign({}, defaultOptions, params || {});
 
   const r = Math.sqrt(options.symbolSize / Math.PI);
   const tau = 2 * Math.PI;
@@ -151,8 +150,8 @@ export function circleSymbol(params?: ISymbolOptions): ISymbol<any> {
   };
 }
 
-export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+export function squareSymbol(params?: Partial<ISymbolOptions>): ISymbol<any> {
+  const options: ISymbolOptions = Object.assign({}, defaultOptions, params || {});
 
   const length = Math.sqrt(options.symbolSize);
 
@@ -177,8 +176,8 @@ export function squareSymbol(params?: ISymbolOptions): ISymbol<any> {
   };
 }
 
-export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
-  const options: ISymbolOptions = merge({}, defaultOptions, params || {});
+export function diamondSymbol(params?: Partial<ISymbolOptions>): ISymbol<any> {
+  const options: ISymbolOptions = Object.assign({}, defaultOptions, params || {});
 
   const tan30 = Math.sqrt(1 / 3);
   const tan30Double = tan30 * 2;
@@ -211,19 +210,19 @@ export function diamondSymbol(params?: ISymbolOptions): ISymbol<any> {
 }
 
 export interface ILineSymbolOptions extends IStyleSymbolOptions {
-  lineWidth?: number;
-  curve?: CurveFactory; // d3 curve factory (e.g. curveCatmullRom)
+  lineWidth: number;
+  curve: CurveFactory|null; // d3 curve factory (e.g. curveCatmullRom)
 }
 
-const defaultLineOptions = merge({
+const defaultLineOptions: Readonly<ILineSymbolOptions> = Object.assign({
   lineWidth: 1,
   curve: null
 }, defaultStyleOptions);
 
 declare type IPoint = [number, number];
 
-export function lineRenderer(params?: ILineSymbolOptions) {
-  const options: ILineSymbolOptions = merge({}, defaultLineOptions, params || {});
+export function lineRenderer(params?: Partial<ILineSymbolOptions>) {
+  const options: ILineSymbolOptions = Object.assign({}, defaultLineOptions, params || {});
 
   const styles = {
     [ERenderMode.NORMAL]: options.fillColor,
@@ -262,6 +261,7 @@ export function lineRenderer(params?: ILineSymbolOptions) {
 /**
  * creates an parses a renderer
  * @param symbol
+ * @internal
  * @returns {any}
  */
 export function createRenderer<T>(symbol: ISymbol<T>|string): ISymbol<T> {

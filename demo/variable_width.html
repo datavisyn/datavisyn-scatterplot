@@ -3,23 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <title>Scatterplot Test</title>
+  <link rel="stylesheet" type="text/css" href="scatterplot.css" />
     <style>
         .datavisyn-scatterplot {
-            width: 520px;
-            height: 500px
+            height: 500px;
+            width: 1058px;
+        }
+
+        .datavisyn-scatterplot.active {
+          width: 558px;
+        }
+
+        #root {
+          flex: 1 1 100vw;
+        }
+
+        #sidebar {
+          flex: 0 0 0;
+        }
+
+        #sidebar.active {
+          flex: 1 1 50vw;
         }
     </style>
 </head>
 <body>
 <h1>
-  Scatterplot test
+  Scatterplot variable width test
 </h1>
 <label>Number of Points:
     <input type="number" step="1000" value="10000">
   </label>
 <section>
-<div id="root"></div>
-<div id="minimap" style="width: 250px; height: 250px"></div>
+  <button id="toggle-sidebar">Toggle Sidebar</button>
+  <div id="wrapper">
+      <div id="root"></div>
+      <div id="sidebar">this is a sidebar</div>
+  </div>
 </section>
 <section>
 <pre>
@@ -35,54 +55,44 @@
 <script src="scatterplot.js"></script>
 <script>
   (function () {
+
+    let s;
     function rebuild(count) {
       var data = [];
-      var secondaryData = [];
       console.time('gen');
       for (var i = 0; i < count; ++i) {
         //data.push({x: 100*i/count, y: 100*(count-i)/count});
         data.push({x: Math.random()*100, y: Math.random()*100});
       }
-
-      for (var j = 0; j < 20; ++j) {
-        secondaryData.push([Math.random()*100, Math.random()*1000]);
-      }
-
       console.timeEnd('gen');
       var div = document.querySelector('#root');
       div.innerHTML = ''; //clear existing stuff
 
-      var s = datavisyn.scatterplot.dualAxis(
-          data,
-          secondaryData,
-          div,
-          {
-              margin: { right: 50 },
-              symbol2: "l:red",
-              xlim: [0,100],
-              ylim: [0,100],
-              y2lim: [0, 1000],
-              x2: function(d) { return d[0] },
-              y2: function(d) { return d[1] }
-          }
-      );
-      //hack render to have information
-      var bak = s.render.bind(s);
-      s.render = function() {
-        console.time('render');
-        bak.apply(s, [].slice. call(arguments));
-        console.timeEnd('render');
-      };
+      s = new datavisyn.scatterplot.Scatterplot(data, div, { xlim: [0,100], ylim: [0,100], scale: 0});
+
+
 
       //var m = new datavisyn.scatterplot.MiniMap(s, document.querySelector('#minimap'));
 
+
+
       s.render();
+      s.window = {xMinMax: [75, 100], yMinMax: [0, 100]};
+      s.render();
+
+      s.on('windowChanged', (window) => console.log(window));
     }
 
     document.querySelector('input').onchange = function() {
       rebuild(+this.value);
     };
-    rebuild(100);
+    rebuild(10000);
+
+    const button = document.querySelector('#toggle-sidebar');
+    button.addEventListener('click', () => {
+      document.querySelector('.datavisyn-scatterplot').classList.toggle('active');
+      s.render();
+    });
   })();
 
   //React.render(

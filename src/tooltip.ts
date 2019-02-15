@@ -24,8 +24,8 @@ function findTooltip(parent: HTMLElement, ensureExists = true) {
 
 function showTooltipAt(tooltip: HTMLElement, x: number, y: number) {
   tooltip.style.display = 'block';
-  tooltip.style.left = (x-tooltip.clientWidth/2)+'px';
-  tooltip.style.top = (y-tooltip.clientHeight)+'px';
+  tooltip.style.left = `${(x-tooltip.clientWidth/2)}px`;
+  tooltip.style.top = `${(y-tooltip.clientHeight)}px`;
 }
 
 function toString(d: any) {
@@ -38,6 +38,9 @@ function toString(d: any) {
   return JSON.stringify(d);
 }
 
+/**
+ * @internal
+ */
 export default function showTooltip(parent: HTMLElement, items:any[], x:number, y:number) {
   const tooltip: HTMLElement = findTooltip(parent, items.length > 0);
   if (items.length === 0) {

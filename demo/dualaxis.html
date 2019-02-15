@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Scatterplot Test</title>
+  <link rel="stylesheet" type="text/css" href="scatterplot.css" />
     <style>
         .datavisyn-scatterplot {
             width: 520px;
@@ -15,10 +16,11 @@
   Scatterplot test
 </h1>
 <label>Number of Points:
-    <input type="number" step="100" value="100">
+    <input type="number" step="1000" value="10000">
   </label>
 <section>
 <div id="root"></div>
+<div id="minimap" style="width: 250px; height: 250px"></div>
 </section>
 <section>
 <pre>
@@ -34,37 +36,46 @@
 <script src="scatterplot.js"></script>
 <script>
   (function () {
-      function clamp(v, min, max) {
-          return Math.min(max, Math.max(v, min));
-      }
     function rebuild(count) {
       var data = [];
-      var data2 = [];
+      var secondaryData = [];
       console.time('gen');
       for (var i = 0; i < count; ++i) {
         //data.push({x: 100*i/count, y: 100*(count-i)/count});
-        data.push({x: i*100/(count-1), y: Math.random()*100, y2: clamp(Math.floor(i*100/(count-1)+ (Math.random()-0.5)*50), 0, 100)});
-        data2.push({x: i*100/(count-1), y: clamp(Math.floor(i*1000/(count-1)+ (Math.random()-0.5)*500), 0, 1000)});
+        data.push({x: Math.random()*100, y: Math.random()*100});
       }
+
+      for (var j = 0; j < 20; ++j) {
+        secondaryData.push([Math.random()*100, Math.random()*1000]);
+      }
+
       console.timeEnd('gen');
       var div = document.querySelector('#root');
       div.innerHTML = ''; //clear existing stuff
 
-      var s = new datavisyn.scatterplot.DualAxisScatterplot(data, data2, div, {
-          xlim: [0,100],
-          ylim: [0,100],
-          y2lim: [0,1000],
-          //zoom: { scale: datavisyn.scatterplot.EScaleAxes.x},
-          symbol: 'o',
-          symbol2: '.'
-      });
+      var s = datavisyn.scatterplot.dualAxis(
+          data,
+          secondaryData,
+          div,
+          {
+              margin: { right: 50 },
+              symbol2: "l:red",
+              xlim: [0,100],
+              ylim: [0,100],
+              y2lim: [0, 1000],
+              x2: function(d) { return d[0] },
+              y2: function(d) { return d[1] }
+          }
+      );
       //hack render to have information
       var bak = s.render.bind(s);
       s.render = function() {
         console.time('render');
-        bak.apply(s, [].slice.call(arguments));
+        bak.apply(s, [].slice. call(arguments));
         console.timeEnd('render');
       };
+
+      //var m = new datavisyn.scatterplot.MiniMap(s, document.querySelector('#minimap'));
 
       s.render();
     }
@@ -72,7 +83,7 @@
     document.querySelector('input').onchange = function() {
       rebuild(+this.value);
     };
-    rebuild(20);
+    rebuild(100);
   })();
 
   //React.render(

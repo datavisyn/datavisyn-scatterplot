@@ -21,15 +21,18 @@ function distance2(a: IPoint, b: IPoint) {
 }
 
 export interface ILassoOptions {
-  lineWidth?: number;
-  strokeStyle?: string;
-  fillStyle?: string;
-  pointRadius?: number;
-  dashedLine?: {dashLength: number, gapLength: number};
+  lineWidth: number;
+  strokeStyle: string;
+  fillStyle: string;
+  pointRadius: number;
+  dashedLine: {dashLength: number, gapLength: number};
 }
 
-export default class Lasso {
-  private props: ILassoOptions = {
+/**
+ * @internal
+ */
+export function defaultOptions(): Readonly<ILassoOptions> {
+  return {
     lineWidth: 2,
     strokeStyle: 'rgba(0,0,0,1)',
     fillStyle: 'rgba(0,0,0,0.2)',
@@ -39,11 +42,15 @@ export default class Lasso {
       gapLength: 3
     }
   };
+}
+
+export default class Lasso {
+  private props: Readonly<ILassoOptions> = defaultOptions();
   private line = d3line().curve(curveLinearClosed);
   private points: IPoint[] = [];
-  private current: IPoint = null;
+  private current: IPoint|null = null;
 
-  constructor(options?: ILassoOptions) {
+  constructor(options?: Partial<ILassoOptions>) {
     merge(this.props, options);
   }
 
@@ -58,10 +65,9 @@ export default class Lasso {
   }
 
   pushCurrent() {
-    const p = this.points,
-      pl = p.length,
-      c = this.current;
-    if (!c || (pl > 0 && distance2(p[pl - 1], c) < MIN_POINT_DISTANCE2)) {
+    const p = this.points;
+    const pl = p.length;
+    if (!this.current || (pl > 0 && distance2(p[pl - 1], this.current) < MIN_POINT_DISTANCE2)) {
       return false;
     }
     p.push(this.current);
@@ -79,16 +85,16 @@ export default class Lasso {
     this.current = null;
   }
 
-  tester(p2nX: (p: number)=>number, p2nY: (p: number)=>number, shiftX: number = 0, shiftY: number = 0): ITester {
+  tester(p2nX: (p: number)=>number, p2nY: (p: number)=>number, shiftX: number = 0, shiftY: number = 0): ITester|null {
     if (this.points.length < 3) {
       return null;
     }
-    const polygon = polygonHull(this.points.map(([x,y]) => <[number, number]>[p2nX(x + shiftX), p2nY(y + shiftY)]));
+    const polygon = polygonHull(this.points.map(([x,y]) => <[number, number]>[p2nX(x + shiftX), p2nY(y + shiftY)]))!;
     const [x0, x1] = extent(polygon, (d) => d[0]);
     const [y0, y1] = extent(polygon, (d) => d[1]);
     return {
       test: (x: number, y: number) => polygonContains(polygon, [x, y]),
-      testArea: hasOverlap(x0, y0, x1, y1)
+      testArea: hasOverlap(x0!, y0!, x1!, y1!)
     };
   }
 
@@ -124,7 +130,9 @@ export default class Lasso {
     };
 
     renderPoint(p[0]);
-    renderPoint(this.current);
+    if (this.current) {
+      renderPoint(this.current);
+    }
     ctx.closePath();
     ctx.stroke();
 

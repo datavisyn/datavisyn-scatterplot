@@ -4,12 +4,11 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 
-import {axisLeft, axisBottom, axisRight, AxisScale, Axis} from 'd3-axis';
+import {axisLeft, axisBottom, axisRight} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
 import {quadtree, Quadtree} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
-import merge from './merge';
 import {
   hasOverlap,
   IBoundsPredicate
@@ -39,7 +38,7 @@ export interface IDualAxisFormatOptions extends IFormatOptions {
   /**
    * d3 format used for formatting the y2 axis
    */
-  y2?: string | ((n: number) => string);
+  y2: string | ((n: number) => string) | null;
 }
 
 /**
@@ -52,69 +51,58 @@ export interface IDualAxisScatterplotOptions<T,U> extends IScatterplotOptions<T>
    * default: d.x
    * @param d
    */
-  x2?: IAccessor<U>;
+  x2: IAccessor<U>;
 
   /**
    * y2 accessor of the secondary data
    * default: d.y
    * @param d
    */
-  y2?: IAccessor<U>;
+  y2: IAccessor<U>;
 
   /**
    * y axis label
    * default: x
    */
-  y2label?: string;
+  y2label: string;
 
   /**
    * d3 y2 scale
    * default: linear scale with a domain from 0...100
    */
-  y2scale?: IScale;
+  y2scale: IScale;
 
   /**
    * instead of specifying the scale just the y limits
    */
-  y2lim?: [number, number];
+  y2lim: [number, number];
 
   /**
    * renderer used to render secondary dataset
    * default: steelblue circle
    */
-  symbol2?: ISymbol<U>|string;
+  symbol2: ISymbol<U>|string;
 
-  format?: IDualAxisFormatOptions;
+  format: IDualAxisFormatOptions;
 }
 
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 
-function defaultProps<T,U>(): IDualAxisScatterplotOptions<T,U> {
+function defaultProps<T,U>(): Partial<IDualAxisScatterplotOptions<T,U>> {
   return {
-    x: (d) => (<any>d).x,
-    y: (d) => (<any>d).y,
-
     x2: (d) => (<any>d).x,
     y2: (d) => (<any>d).y,
-
-    xlabel: 'x',
-    ylabel: 'y',
     y2label: 'y2',
-
-    xscale: <IScale>scaleLinear().domain([0, 100]),
-    yscale: <IScale>scaleLinear().domain([0, 100]),
     y2scale: <IScale>scaleLinear().domain([0, 1000]),
-
-    symbol: 'o',
-    symbol2: 'o',
+    symbol2: 'o'
   };
 }
 
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
-export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
+export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
 
   protected readonly normalized2pixel: IDualAxisScalesObject = {
     x: scaleLinear(),
@@ -122,15 +110,13 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
     y2: scaleLinear()
   };
 
-  private secondaryTree: Quadtree<U>;
+  private secondaryTree: Quadtree<U>|null = null;
 
   private readonly renderer: ISymbol<T>;
   private readonly secondaryRenderer: ISymbol<U>;
 
-  protected props: IDualAxisScatterplotOptions<T,U>;
-
-  constructor(data: T[], secondaryData: U[], root: HTMLElement, props: IDualAxisScatterplotOptions<T,U>) {
-    super(data, root, merge(defaultProps<T,U>(), props));
+  constructor(data: T[], secondaryData: U[], root: HTMLElement, props: Partial<IDualAxisScatterplotOptions<T,U>> = {}) {
+    super(root, <any>Object.assign(defaultProps<T,U>(), props));
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
     this.props.y2scale = fixScale(this.props.y2scale, this.props.y2, secondaryData, props ? props.y2scale : null, props ? props.y2lim : null);
@@ -146,13 +132,13 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
     this.setDataImpl(data);
     this.setSecondaryData(secondaryData);
 
-    this.selectionTree = quadtree([], this.tree.x(), this.tree.y());
+    this.selectionTree = quadtree([], this.tree!.x(), this.tree!.y());
 
     this.initDOM(`
-      <svg class="${cssprefix}-axis-right" style="width: ${this.props.margin.left + 2}px; right: 0">
-        <g transform="translate(0,${this.props.margin.top})"><g>
+      <svg class="${cssprefix}-axis-right" style="width: ${this.props.marginLeft + 2}px; right: 0">
+        <g transform="translate(0,${this.props.marginTop})"><g>
       </svg>
-      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.margin.top + 2}px; bottom: ${this.props.margin.bottom}px; right: 0"><div>${this.props.y2label}</div></div>
+      <div class="${cssprefix}-axis-right-label"  style="top: ${this.props.marginTop + 2}px; bottom: ${this.props.marginBottom}px; right: 0"><div>${this.props.y2label}</div></div>
     `);
 
     this.canvasDataLayer = <HTMLCanvasElement>this.parent.children[0];
@@ -162,7 +148,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
   private setSecondaryData(secondaryData: U[]) {
     const domain2normalizedX = this.props.xscale.copy().range(this.normalized2pixel.x.domain());
     const domain2normalizedY2 = this.props.y2scale.copy().range(this.normalized2pixel.y2.domain());
-    this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x2(d)), (d) => domain2normalizedY2(this.props.y2(d)));
+    this.secondaryTree = quadtree(secondaryData, (d) => domain2normalizedX(this.props.x2(d))!, (d) => domain2normalizedY2(this.props.y2(d))!);
   }
 
   set secondaryData(secondaryData: U[]) {
@@ -190,11 +176,11 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       return this.resized();
     }
 
-    const c = this.canvasDataLayer,
-      margin = this.props.margin,
-      bounds = {x0: margin.left, y0: margin.top, x1: c.clientWidth - margin.right, y1: c.clientHeight - margin.bottom},
-      boundsWidth = bounds.x1 - bounds.x0,
-      boundsHeight = bounds.y1 - bounds.y0;
+    const c = this.canvasDataLayer!;
+    const {marginLeft, marginBottom, marginRight, marginTop} = this.props;
+    const bounds = {x0: marginLeft, y0: marginTop, x1: c.clientWidth - marginRight, y1: c.clientHeight - marginBottom};
+    const boundsWidth = bounds.x1 - bounds.x0;
+    const boundsHeight = bounds.y1 - bounds.y0;
 
     // emit render reason as string
     this.emit(DualAxisScatterplot.EVENT_RENDER, ERenderReason[reason], transformDelta);
@@ -213,9 +199,9 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
 
     const {n2pX, n2pY, n2pY2} = this.transformedNormalized2PixelScales();
 
-    const nx = (v) => n2pX.invert(v),
-      ny = (v) => n2pY.invert(v),
-      ny2 = (v) => n2pY2.invert(v);
+    const nx = (v: number) => n2pX.invert(v);
+    const ny = (v: number) => n2pY.invert(v);
+    const ny2 = (v: number) => n2pY2.invert(v);
     //inverted y scale
     const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
     const isNodeVisible2 = hasOverlap(nx(0), ny2(boundsHeight), nx(boundsWidth), ny2(0));
@@ -224,10 +210,10 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       zoomLevel: this.currentTransform.k
     };
 
-    const border = this.props.margin.canvasBorder;
+    const border = this.props.canvasBorder;
 
     const renderCtx = (isSelection = false, isSecondary = false) => {
-      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer).getContext('2d');
+      const ctx = (isSelection ? this.canvasSelectionLayer : this.canvasDataLayer)!.getContext('2d')!;
       if(!isSecondary) {
         ctx.clearRect(0, 0, c.width, c.height);
       }
@@ -239,15 +225,15 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       const debug = !isSelection && DEBUG;
       ctx.translate(bounds.x0, bounds.y0);
 
-      if (!isSelection && this.hasBackground()) {
+      if (!isSelection && this.props.renderBackground) {
         ctx.save();
         this.props.renderBackground(ctx, xscale, yscale);
         ctx.restore();
       }
 
-      this.renderTree<T|U>(ctx, tree, renderer, xscale, isSecondary? y2scale : yscale, isSecondary? isNodeVisible2 : isNodeVisible, isSecondary, debug);
+      this.renderTree<T|U>(ctx, <any>tree, renderer, xscale, isSecondary? y2scale : yscale, isSecondary? isNodeVisible2 : isNodeVisible, isSecondary, debug);
 
-      if (isSelection && this.hasExtras()) {
+      if (isSelection && this.props.extras) {
         ctx.save();
         this.props.extras(ctx, xscale, yscale);
         ctx.restore();
@@ -257,7 +243,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       return ctx;
     };
 
-    const renderSelection = !this.isSelectAble() && !this.hasExtras() ? () => undefined : () => {
+    const renderSelection = typeof this.props.isSelectEvent !== 'function' && this.props.extras == null ? () => undefined : () => {
         const ctx = renderCtx(true);
         this.lasso.render(ctx);
       };
@@ -283,7 +269,7 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
         renderSelection();
         renderAxes();
         //redraw everything after a while, i.e stopped moving
-        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoom.delay);
+        this.zoomHandle = setTimeout(this.render.bind(this, ERenderReason.AFTER_TRANSLATE), this.props.zoomDelay);
         break;
       case ERenderReason.SELECTION_CHANGED:
         renderSelection();
@@ -316,10 +302,10 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T> {
       $parent = select(this.parent);
     this.setAxisFormat(left, 'y');
     this.setAxisFormat(bottom, 'x');
-    this.setAxisFormat(right, 'y2');
-    $parent.select(`.${cssprefix}-axis-left > g`).call(left);
-    $parent.select(`.${cssprefix}-axis-bottom > g`).call(bottom);
-    $parent.select(`.${cssprefix}-axis-right > g`).call(right);
+    this.setAxisFormat(right, <any>'y2');
+    $parent.select<SVGGElement>(`.${cssprefix}-axis-left > g`).call(left);
+    $parent.select<SVGGElement>(`.${cssprefix}-axis-bottom > g`).call(bottom);
+    $parent.select<SVGGElement>(`.${cssprefix}-axis-right > g`).call(right);
   }
 
   private renderTree<X>(ctx: CanvasRenderingContext2D, tree: Quadtree<X>, renderer: ISymbolRenderer<X>, xscale: IScale, yscale: IScale, isNodeVisible: IBoundsPredicate, isSecondary = false, debug = false) {

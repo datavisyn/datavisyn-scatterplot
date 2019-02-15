@@ -8,9 +8,10 @@
  * merges the second object into the first one
  * @param target
  * @param others
+ * @internal
  * @returns {T}
  */
-export default function merge<T>(target:T, ...others:any[]) {
+export default function merge<T extends any>(target:T, ...others:any[]) {
   others = others.filter((o) => !!o); //is defined
   if (others.length === 0) {
     return target;

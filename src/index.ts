@@ -8,8 +8,13 @@ import DualAxisScatterplot, {IDualAxisScatterplotOptions} from './DualAxisScatte
 import * as _symbol from './symbol';
 import * as d3scale from 'd3-scale';
 import {IScatterplotOptions} from './AScatterplot';
-export {default as Scatterplot} from './Scatterplot';
-export {EScaleAxes, IAccessor, IScale, IWindow, IZoomOptions, IScatterplotOptions} from './AScatterplot';
+
+export {default, default as Scatterplot} from './Scatterplot';
+export * from './Scatterplot';
+export {default as DualAxisScatterplot} from './DualAxisScatterplot';
+export * from './DualAxisScatterplot';
+export * from './AScatterplot';
+export {ISymbol, ERenderMode, ISymbolRenderer, IRenderInfo, IStyleSymbolOptions, ISymbolOptions} from './symbol';
 //export {default as MiniMap} from './MiniMap';
 
 /**
@@ -17,8 +22,6 @@ export {EScaleAxes, IAccessor, IScale, IWindow, IZoomOptions, IScatterplotOption
  */
 export const scale = d3scale;
 export const symbol = _symbol;
-
-export default Scatterplot;
 
 export function create<T>(data:T[], canvas:HTMLCanvasElement, options: IScatterplotOptions<T>):Scatterplot<T> {
   return new Scatterplot(data, canvas, options);
