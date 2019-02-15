@@ -374,7 +374,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   constructor(root: HTMLElement, props?: Partial<C>) {
     super();
     this.props = <C>merge(defaultProps(), props);
-    this.parent = root.ownerDocument.createElement('div');
+    this.parent = root.ownerDocument!.createElement('div');
 
     //need to use d3 for d3.mouse to work
     const $parent = select<HTMLElement, null>(this.parent);
@@ -878,7 +878,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const pos = this.mousePosAtCanvas();
     //TODO find a more efficient way or optimize the timing
-    this.showTooltipHandle = setTimeout(this.showTooltip.bind(this, pos, event), this.props.tooltipDelay);
+    this.showTooltipHandle = window.setTimeout(this.showTooltip.bind(this, pos, event), this.props.tooltipDelay);
     this.emit(AScatterplot.EVENT_MOUSE_MOVED, event);
   }
 
