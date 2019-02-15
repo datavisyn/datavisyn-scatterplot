@@ -1,6 +1,6 @@
 {
   "name": "datavisyn-scatterplot",
-  "version": "1.0.10",
+  "version": "1.0.11-SNAPSHOT",
   "description": "a canvas based scatterplot implementation",
   "homepage": "https://datavisyn.io",
   "author": {
