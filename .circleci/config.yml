@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/datavisyn
     docker:
-      - image: circleci/node:8-browsers
+      - image: circleci/node:12.13-buster-browsers
     steps:
       - checkout
       - restore_cache:
