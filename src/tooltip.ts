@@ -46,7 +46,7 @@ export default function showTooltip(parent: HTMLElement, items:any[], x:number, 
   if (items.length === 0) {
     if (tooltip) {
       //hide tooltip
-      tooltip.style.display = null;
+      tooltip.style.display = '';
     }
     return;
   }
