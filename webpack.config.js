@@ -89,7 +89,7 @@ module.exports = (env, options) => {
           ].slice(process.env.CI || !dev ? 2 : 0) // no optimizations for CIs and in production mode
         },
         {
-          test: /\.(png|jpg)$/,
+          test: /\.(png|jpg|gif|webp)$/,
           loader: 'url-loader',
           options: {
             limit: 20000 //inline <= 10kb
