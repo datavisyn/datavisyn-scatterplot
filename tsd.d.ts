@@ -4,6 +4,9 @@ declare module '*.scss' {
   export default content;
 }
 declare module '*.png';
+declare module '*.jpg';
+declare module '*.gif';
+declare module '*.webp';
 //allow html dependencies
 declare module '*.html' {
   const content: string;
