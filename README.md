@@ -1,5 +1,6 @@
-datavisyn-scatterplot [![Datavisyn][datavisyn-image]][datavisyn-url] [![NPM version][npm-image]][npm-url] [![Build Status][circleci-image]][circleci-url]
+datavisyn-scatterplot 
 ===========
+[![Datavisyn][datavisyn-image]][datavisyn-url] [![NPM version][npm-image]][npm-url] [![Build Status][circleci-image]][circleci-url]
 
 This repository contains a scalable scatterplot implementation based on HTML Canvas and SVG. 
 
