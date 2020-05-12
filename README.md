@@ -1,4 +1,4 @@
-datavisyn-scatterplot [![Phovea][phovea-image]][phovea-url] [![NPM version][npm-image]][npm-url] [![Build Status][circleci-image]][circleci-url]
+datavisyn-scatterplot [![Datavisyn][datavisyn-image]][datavisyn-url] [![NPM version][npm-image]][npm-url] [![Build Status][circleci-image]][circleci-url]
 ===========
 
 This repository contains a scalable scatterplot implementation based on HTML Canvas and SVG. 
@@ -39,8 +39,8 @@ Dependencies
 This repository is part of the **Target Discovery Platform** (TDP). For tutorials, API docs, and more information about the build and deployment process, see the [documentation page](https://wiki.datavisyn.io).
 
  
-[phovea-image]: https://img.shields.io/badge/Phovea-Client%20Plugin-F47D20.svg
-[phovea-url]: https://phovea.caleydo.org
+[datavisyn-image]: https://img.shields.io/badge/datavisyn-plugin-F47D20.svg
+[datavisyn-url]: http://datavisyn.io
 [npm-image]: https://badge.fury.io/js/datavisyn-scatterplot.svg
 [npm-url]: https://npmjs.org/package/datavisyn-scatterplot
 [circleci-image]: https://circleci.com/gh/datavisyn/datavisyn-scatterplot.svg?style=shield
