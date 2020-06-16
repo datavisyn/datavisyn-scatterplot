@@ -3,11 +3,11 @@
  * email:   samuel_gratzl@gmx.at
  * created: 2016-10-28T11:19:52.797Z
  */
-import AScatterplot, { IScale, IScatterplotOptions, IScalesObject, ERenderReason, INormalizedScalesObject } from './AScatterplot';
+import { AScatterplot, IScale, IScatterplotOptions, IScalesObject, ERenderReason, INormalizedScalesObject } from './AScatterplot';
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<T>> {
+export declare class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<T>> {
     protected readonly normalized2pixel: IScalesObject;
     private readonly renderer;
     constructor(data: T[], root: HTMLElement, props?: Partial<IScatterplotOptions<T>>);

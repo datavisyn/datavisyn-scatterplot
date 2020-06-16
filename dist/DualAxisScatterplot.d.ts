@@ -4,7 +4,7 @@
  * created: 2016-10-28T11:19:52.797Z
  */
 import { ISymbol } from './symbol';
-import AScatterplot, { IScale, IFormatOptions, IScatterplotOptions, IScalesObject, IAccessor, ERenderReason, INormalizedScalesObject } from './AScatterplot';
+import { AScatterplot, IScale, IFormatOptions, IScatterplotOptions, IScalesObject, IAccessor, ERenderReason, INormalizedScalesObject } from './AScatterplot';
 export interface IDualAxisScalesObject extends IScalesObject {
     y2: IScale;
 }
@@ -57,7 +57,7 @@ export interface IDualAxisScatterplotOptions<T, U> extends IScatterplotOptions<T
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
-export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
+export declare class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
     protected readonly normalized2pixel: IDualAxisScalesObject;
     private secondaryTree;
     private readonly renderer;

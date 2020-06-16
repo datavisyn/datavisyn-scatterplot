@@ -1,12 +1,12 @@
 /**
  * Created by sam on 19.12.2016.
  */
-import Scatterplot from './Scatterplot';
+import { Scatterplot } from './Scatterplot';
 import { EScaleAxes } from './AScatterplot';
 export interface IMiniMapOptions {
     scale: EScaleAxes;
 }
-export default class MiniMap {
+export declare class MiniMap {
     private parent;
     private readonly brush;
     private readonly props;

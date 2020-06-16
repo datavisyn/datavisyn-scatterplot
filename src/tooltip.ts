@@ -5,53 +5,57 @@
 import './scss/main.scss';
 import {cssprefix} from './constants';
 
-//based on bootstrap tooltips
-const template = `<div class="${cssprefix}-tooltip" role="tooltip">
-  <div></div>
-  <div></div>
-</div>`;
 
-function findTooltip(parent: HTMLElement, ensureExists = true) {
-  let tooltip = <HTMLElement>parent.querySelector(`div.${cssprefix}-tooltip`);
-  if (!tooltip && ensureExists) {
-    tooltip = document.createElement('div'); //helper
-    tooltip.innerHTML = template;
-    tooltip = <HTMLDivElement>tooltip.childNodes[0];
-    parent.appendChild(tooltip);
-  }
-  return tooltip;
-}
+export class TooltipUtils {
 
-function showTooltipAt(tooltip: HTMLElement, x: number, y: number) {
-  tooltip.style.display = 'block';
-  tooltip.style.left = `${(x-tooltip.clientWidth/2)}px`;
-  tooltip.style.top = `${(y-tooltip.clientHeight)}px`;
-}
+  //based on bootstrap tooltips
+  static readonly template = `<div class="${cssprefix}-tooltip" role="tooltip">
+    <div></div>
+    <div></div>
+  </div>`;
 
-function toString(d: any) {
-  if (typeof d.toString === 'function') {
-    const s = d.toString();
-    if (s !== '[object Object]') {
-      return s;
+  static findTooltip(parent: HTMLElement, ensureExists = true) {
+    let tooltip = <HTMLElement>parent.querySelector(`div.${cssprefix}-tooltip`);
+    if (!tooltip && ensureExists) {
+      tooltip = document.createElement('div'); //helper
+      tooltip.innerHTML = TooltipUtils.template;
+      tooltip = <HTMLDivElement>tooltip.childNodes[0];
+      parent.appendChild(tooltip);
     }
+    return tooltip;
   }
-  return JSON.stringify(d);
-}
 
-/**
- * @internal
- */
-export default function showTooltip(parent: HTMLElement, items:any[], x:number, y:number) {
-  const tooltip: HTMLElement = findTooltip(parent, items.length > 0);
-  if (items.length === 0) {
-    if (tooltip) {
-      //hide tooltip
-      tooltip.style.display = '';
+  static showTooltipAt(tooltip: HTMLElement, x: number, y: number) {
+    tooltip.style.display = 'block';
+    tooltip.style.left = `${(x-tooltip.clientWidth/2)}px`;
+    tooltip.style.top = `${(y-tooltip.clientHeight)}px`;
+  }
+
+  static toString(d: any) {
+    if (typeof d.toString === 'function') {
+      const s = d.toString();
+      if (s !== '[object Object]') {
+        return s;
+      }
     }
-    return;
+    return JSON.stringify(d);
   }
-  const content = <HTMLElement>tooltip.querySelector('div');
-  content.innerHTML = `<pre>${items.map(toString).join('\n')}</pre>`;
 
-  showTooltipAt(tooltip, x, y);
+  /**
+   * @internal
+   */
+  static showTooltip(parent: HTMLElement, items:any[], x:number, y:number) {
+    const tooltip: HTMLElement = TooltipUtils.findTooltip(parent, items.length > 0);
+    if (items.length === 0) {
+      if (tooltip) {
+        //hide tooltip
+        tooltip.style.display = '';
+      }
+      return;
+    }
+    const content = <HTMLElement>tooltip.querySelector('div');
+    content.innerHTML = `<pre>${items.map(toString).join('\n')}</pre>`;
+
+    TooltipUtils.showTooltipAt(tooltip, x, y);
+  }
 }

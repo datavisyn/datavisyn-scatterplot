@@ -10,7 +10,7 @@ import { quadtree } from 'd3-quadtree';
 import { ERenderMode, SymbolUtils } from './symbol';
 import { QuadtreeUtils } from './quadtree';
 import { cssprefix, DEBUG, debuglog } from './constants';
-import AScatterplot, { fixScale, EScaleAxes, ERenderReason } from './AScatterplot';
+import { AScatterplot, fixScale, EScaleAxes, ERenderReason } from './AScatterplot';
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 function defaultProps() {
@@ -25,7 +25,7 @@ function defaultProps() {
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
-export default class DualAxisScatterplot extends AScatterplot {
+export class DualAxisScatterplot extends AScatterplot {
     constructor(data, secondaryData, root, props = {}) {
         super(root, Object.assign(defaultProps(), props));
         this.normalized2pixel = {

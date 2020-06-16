@@ -11,7 +11,7 @@ import {ObjectUtils} from './ObjectUtils';
 import {QuadtreeUtils, IBoundsPredicate, ITester} from './quadtree';
 import {Lasso, ILassoOptions} from './lasso';
 import {cssprefix, debuglog} from './constants';
-import showTooltip from './tooltip';
+import {TooltipUtils} from './tooltip';
 import {EventEmitter} from 'eventemitter3';
 
 export enum EScaleAxes {
@@ -303,7 +303,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 
     tooltipDelay: 500,
 
-    showTooltip,
+    showTooltip: TooltipUtils.showTooltip,
 
     isSelectEvent: (event: MouseEvent) => event.ctrlKey || event.altKey,
 
@@ -321,7 +321,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
+export abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
 
   static EVENT_SELECTION_CHANGED = 'selectionChanged';
   static EVENT_SELECTION_IN_PROGRESS_CHANGED = 'selectionInProgressChanged';
@@ -963,5 +963,3 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     return minSize < 5; //TODO tune depend on visual impact
   }
 }
-
-export default AScatterplot;

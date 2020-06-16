@@ -11,7 +11,7 @@ import {quadtree, Quadtree} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer, ERenderMode, SymbolUtils} from './symbol';
 import {QuadtreeUtils, IBoundsPredicate} from './quadtree';
 import {cssprefix, DEBUG, debuglog} from './constants';
-import AScatterplot, {
+import {AScatterplot,
   fixScale,
   IScale,
   IScatterplotOptions,
@@ -27,7 +27,7 @@ const DEFAULT_NORMALIZED_RANGE = [0, 100];
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<T>> {
+export class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<T>> {
 
   protected readonly normalized2pixel: IScalesObject = {
     x: scaleLinear(),

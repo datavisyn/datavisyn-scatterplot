@@ -220,7 +220,7 @@ export interface ITransformDelta {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-declare abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
+export declare abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
     static EVENT_SELECTION_CHANGED: string;
     static EVENT_SELECTION_IN_PROGRESS_CHANGED: string;
     static EVENT_RENDER: string;
@@ -335,4 +335,3 @@ declare abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends
     protected transformData(c: HTMLCanvasElement, bounds: IBoundsObject, boundsWidth: number, boundsHeight: number, x: number, y: number, kx: number, ky: number): void;
     private useAggregation;
 }
-export default AScatterplot;

@@ -11,7 +11,7 @@ import {quadtree, Quadtree} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer, ERenderMode, SymbolUtils} from './symbol';
 import {QuadtreeUtils, IBoundsPredicate} from './quadtree';
 import {cssprefix, DEBUG, debuglog} from './constants';
-import AScatterplot, {
+import {AScatterplot,
   fixScale,
   IScale,
   IFormatOptions,
@@ -99,7 +99,7 @@ function defaultProps<T,U>(): Partial<IDualAxisScatterplotOptions<T,U>> {
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
-export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
+export class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
 
   protected readonly normalized2pixel: IDualAxisScalesObject = {
     x: scaleLinear(),

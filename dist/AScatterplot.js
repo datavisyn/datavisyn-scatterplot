@@ -9,7 +9,7 @@ import { ObjectUtils } from './ObjectUtils';
 import { QuadtreeUtils } from './quadtree';
 import { Lasso } from './lasso';
 import { cssprefix, debuglog } from './constants';
-import showTooltip from './tooltip';
+import { TooltipUtils } from './tooltip';
 import { EventEmitter } from 'eventemitter3';
 export var EScaleAxes;
 (function (EScaleAxes) {
@@ -71,7 +71,7 @@ function defaultProps() {
         format: {},
         ticks: {},
         tooltipDelay: 500,
-        showTooltip,
+        showTooltip: TooltipUtils.showTooltip,
         isSelectEvent: (event) => event.ctrlKey || event.altKey,
         lasso: Object.assign({
             interval: 100
@@ -84,7 +84,7 @@ function defaultProps() {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-class AScatterplot extends EventEmitter {
+export class AScatterplot extends EventEmitter {
     constructor(root, props) {
         super();
         this.canvasDataLayer = null;
@@ -647,5 +647,4 @@ AScatterplot.EVENT_MOUSE_CLICKED = 'mouseClicked';
 AScatterplot.EVENT_DRAGGED = 'dragged';
 AScatterplot.EVENT_MOUSE_MOVED = 'mouseMoved';
 AScatterplot.EVENT_ZOOM_CHANGED = 'zoomChanged';
-export default AScatterplot;
 //# sourceMappingURL=AScatterplot.js.map

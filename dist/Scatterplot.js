@@ -10,13 +10,13 @@ import { quadtree } from 'd3-quadtree';
 import { ERenderMode, SymbolUtils } from './symbol';
 import { QuadtreeUtils } from './quadtree';
 import { cssprefix, DEBUG, debuglog } from './constants';
-import AScatterplot, { fixScale, EScaleAxes, ERenderReason, } from './AScatterplot';
+import { AScatterplot, fixScale, EScaleAxes, ERenderReason, } from './AScatterplot';
 //normalized range the quadtree is defined
 const DEFAULT_NORMALIZED_RANGE = [0, 100];
 /**
  * a class for rendering a scatterplot in a canvas
  */
-export default class Scatterplot extends AScatterplot {
+export class Scatterplot extends AScatterplot {
     constructor(data, root, props) {
         super(root, props);
         this.normalized2pixel = {

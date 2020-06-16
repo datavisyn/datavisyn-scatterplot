@@ -1,13 +1,13 @@
 /**
  * Created by sam on 19.12.2016.
  */
-import Scatterplot from './Scatterplot';
+import { Scatterplot } from './Scatterplot';
 import { select, event as d3event } from 'd3-selection';
 import { scaleLinear } from 'd3-scale';
 import { brushX, brushY, brush } from 'd3-brush';
 import { cssprefix } from './constants';
 import { EScaleAxes } from './AScatterplot';
-export default class MiniMap {
+export class MiniMap {
     constructor(plot, parent, props = {}) {
         this.parent = parent;
         this.props = {
