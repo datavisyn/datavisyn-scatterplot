@@ -103,7 +103,7 @@ export default class MiniMap {
    * @param {ScaleLinear<number, number>} scale
    * @returns {[number , number]}
    */
-  private scale(minMax: IMinMax, scale: ScaleLinear<number, number>) : [number, number] {
+  private scale(minMax: IMinMax, scale: ScaleLinear<number, number>): [number, number] {
     return [scale(minMax[0]), scale(minMax[1])];
   }
 }

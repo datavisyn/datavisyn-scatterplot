@@ -1,8 +1,7 @@
 /.tscache
 /.idea
-/build
+/build/
 /tmp
-/dist
 /.bower.json
 /tscommand*.tmp.txt
 *.log

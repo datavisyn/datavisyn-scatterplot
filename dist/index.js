@@ -1,5 +1,3 @@
-import {constants} from 'os';
-
 export * from './constants';
 export * from './ObjectUtils';
 export * from './quadtree';
@@ -10,3 +8,4 @@ export * from './AScatterplot';
 export * from './DualAxisScatterplot';
 export * from './Scatterplot';
 export * from './MiniMap';
+//# sourceMappingURL=index.js.map

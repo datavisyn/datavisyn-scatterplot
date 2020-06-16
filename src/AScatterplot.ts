@@ -7,20 +7,9 @@ import {drag as d3drag} from 'd3-drag';
 import {scaleLinear} from 'd3-scale';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer} from './symbol';
-import merge from './merge';
-import {
-  forEachLeaf,
-  ellipseTester,
-  isLeafNode,
-  getTreeSize,
-  findByTester,
-  getFirstLeaf,
-  ABORT_TRAVERSAL,
-  CONTINUE_TRAVERSAL,
-  IBoundsPredicate,
-  ITester
-} from './quadtree';
-import Lasso, {ILassoOptions, defaultOptions} from './lasso';
+import {ObjectUtils} from './ObjectUtils';
+import {QuadtreeUtils, IBoundsPredicate, ITester} from './quadtree';
+import {Lasso, ILassoOptions} from './lasso';
 import {cssprefix, debuglog} from './constants';
 import showTooltip from './tooltip';
 import {EventEmitter} from 'eventemitter3';
@@ -320,7 +309,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 
     lasso: Object.assign({
       interval: 100
-    }, defaultOptions()),
+    }, Lasso.defaultOptions()),
 
     extras: null,
     renderBackground: null,
@@ -373,7 +362,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   constructor(root: HTMLElement, props?: Partial<C>) {
     super();
-    this.props = <C>merge(defaultProps(), props);
+    this.props = <C>ObjectUtils.merge(defaultProps(), props);
     this.parent = root.ownerDocument!.createElement('div');
 
     //need to use d3 for d3.mouse to work
@@ -617,7 +606,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
 
   protected selectWithTester(tester: ITester, inProgress = false) {
-    const selection = findByTester(this.tree!, tester);
+    const selection = QuadtreeUtils.findByTester(this.tree!, tester);
     return this.setSelectionImpl(selection, inProgress);
   }
 
@@ -814,7 +803,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   private onDrag() {
     if (this.dragHandle < 0) {
-      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
+      this.dragHandle = window.setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
     }
     this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
@@ -854,7 +843,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
     //find closest data item
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    const tester = QuadtreeUtils.ellipseTester(x, y, clickRadiusX, clickRadiusY);
     this.selectWithTester(tester);
     this.emit(AScatterplot.EVENT_MOUSE_CLICKED, event);
   }
@@ -868,8 +857,8 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   findItems(canvasPos: [number, number]) {
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
-    return findByTester(this.tree!, tester);
+    const tester = QuadtreeUtils.ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    return QuadtreeUtils.findByTester(this.tree!, tester);
   }
 
   private onMouseMove(event: MouseEvent) {
@@ -896,21 +885,21 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
     const visitTree = (node: QuadtreeInternalNode<X> | QuadtreeLeaf<X>, x0: number, y0: number, x1: number, y1: number) => {
       if (!isNodeVisible(x0, y0, x1, y1)) {
-        hidden += debug ? getTreeSize(node) : 0;
-        return ABORT_TRAVERSAL;
+        hidden += debug ? QuadtreeUtils.getTreeSize(node) : 0;
+        return QuadtreeUtils.ABORT_TRAVERSAL;
       }
       if (this.useAggregation(n2pX, n2pY, x0, y0, x1, y1)) {
-        const d = getFirstLeaf(node);
+        const d = QuadtreeUtils.getFirstLeaf(node);
         //debuglog('aggregate', getTreeSize(node));
         rendered++;
-        aggregated += debug ? (getTreeSize(node) - 1) : 0;
+        aggregated += debug ? (QuadtreeUtils.getTreeSize(node) - 1) : 0;
         renderer.render(xscale(x(d))!, yscale(y(d))!, d);
-        return ABORT_TRAVERSAL;
+        return QuadtreeUtils.ABORT_TRAVERSAL;
       }
-      if (isLeafNode(node)) { //is a leaf
-        rendered += forEachLeaf(<QuadtreeLeaf<X>>node, (d) => renderer.render(xscale(x(d))!, yscale(y(d))!, d));
+      if (QuadtreeUtils.isLeafNode(node)) { //is a leaf
+        rendered += QuadtreeUtils.forEachLeaf(<QuadtreeLeaf<X>>node, (d) => renderer.render(xscale(x(d))!, yscale(y(d))!, d));
       }
-      return CONTINUE_TRAVERSAL;
+      return QuadtreeUtils.CONTINUE_TRAVERSAL;
     };
 
     ctx.save();

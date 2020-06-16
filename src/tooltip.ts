@@ -2,7 +2,7 @@
  * Created by sam on 28.10.2016.
  */
 
-import './style.scss';
+import './scss/main.scss';
 import {cssprefix} from './constants';
 
 //based on bootstrap tooltips

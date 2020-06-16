@@ -8,11 +8,8 @@ import {axisLeft, axisBottom} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
 import {quadtree, Quadtree} from 'd3-quadtree';
-import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
-import {
-  hasOverlap,
-  IBoundsPredicate,
-} from './quadtree';
+import {ISymbol, ISymbolRenderer, ERenderMode, SymbolUtils} from './symbol';
+import {QuadtreeUtils, IBoundsPredicate} from './quadtree';
 import {cssprefix, DEBUG, debuglog} from './constants';
 import AScatterplot, {
   fixScale,
@@ -44,7 +41,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
     this.props.xscale = fixScale(this.props.xscale, this.props.x, data, props ? props.xscale : null, props ? props.xlim : null);
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
 
-    this.renderer = createRenderer(this.props.symbol);
+    this.renderer = SymbolUtils.createRenderer(this.props.symbol);
 
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
@@ -101,7 +98,7 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
     const nx = (v: number) => n2pX.invert(v);
     const ny = (v: number) => n2pY.invert(v);
     //inverted y scale
-    const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
+    const isNodeVisible = QuadtreeUtils.hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
 
     const renderInfo = {
       zoomLevel: this.currentTransform.k
@@ -217,5 +214,9 @@ export default class Scatterplot<T> extends AScatterplot<T, IScatterplotOptions<
     //debug stats
 
     super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug, x, y);
+  }
+
+  static create<T>(data:T[], canvas:HTMLCanvasElement, options: IScatterplotOptions<T>):Scatterplot<T> {
+    return new Scatterplot(data, canvas, options);
   }
 }
