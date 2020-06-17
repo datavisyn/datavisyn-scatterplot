@@ -26,6 +26,8 @@ export interface IScale extends AxisScale<number>, ZoomScale {
     domain(domain: number[]): this;
     invert(v: number): number;
     copy(): this;
+    (x: number): number | undefined;
+    bandwidth?(): number;
 }
 export interface IScalesObject {
     x: IScale;
