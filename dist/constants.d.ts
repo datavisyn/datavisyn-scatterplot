@@ -17,6 +17,6 @@ export declare const DEBUG = false;
  * @internal
  */
 export declare const debuglog: {
-    (...data: any[]): void;
+    (message?: any, ...optionalParams: any[]): void;
     (message?: any, ...optionalParams: any[]): void;
 };
