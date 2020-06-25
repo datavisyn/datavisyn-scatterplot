@@ -11,7 +11,7 @@
  * @internal
  * @returns {T}
  */
-export default function merge<T extends any>(target:T, ...others:any[]) {
+export default function merge<T extends any>(target:T, ...others:any[]): T {
   others = others.filter((o) => !!o); //is defined
   if (others.length === 0) {
     return target;
