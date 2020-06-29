@@ -123,7 +123,6 @@
         const y2 = document.querySelector('#y2').valueAsNumber ?? 100;
 
         const newWindow = {xMinMax: [x1, x2], yMinMax: [y1, y2]};
-        console.debug('NEW WINDOW', newWindow);
         s.window = newWindow;
       } else {
         console.error('Cannot set the new window, because the scatterplot was not instantiated.');
