@@ -402,15 +402,19 @@ export class AScatterplot extends EventEmitter {
             .on('end', this.onZoomEnd.bind(this));
     }
     window2transform(window) {
-        const range2transform = (minMax, scale) => {
-            const pmin = scale(minMax[0]);
-            const pmax = scale(minMax[1]);
-            const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
-            return { k, t: (scale.range()[0] - pmin) };
+        const range2transform = (minMax, scale, coordinateSystemOrigin) => {
+            const scaledWindowAxisMin = scale(minMax[0]);
+            const scaledWindowAxisMax = scale(minMax[1]);
+            const pmin = Math.min(scaledWindowAxisMin, scaledWindowAxisMax);
+            const pmax = Math.max(scaledWindowAxisMin, scaledWindowAxisMax);
+            const rangeMin = Math.min(scale.range()[0], scale.range()[1]);
+            const rangeMax = Math.max(scale.range()[0], scale.range()[1]);
+            const k = (rangeMax - rangeMin) / (pmax - pmin);
+            return { k, t: (coordinateSystemOrigin - pmin) };
         };
         const s = this.props.scale;
-        const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
-        const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
+        const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale, this.props.xscale.range()[0]) : null;
+        const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale, this.props.yscale.range()[1]) : null;
         let k = 1;
         if (x && y) {
             k = Math.min(x.k, y.k);
