@@ -11,20 +11,16 @@
     "declarationDir": "dist",
     "outDir": "dist",
     "experimentalDecorators": true,
-    "lib": [
-      "dom",
-      "es2015",
-      "es2016.array.include",
-      "es2017.object"
-    ],
     "noImplicitAny": false,
     "skipLibCheck": true,
     "esModuleInterop": false,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true // required for i18next,
+    "allowSyntheticDefaultImports": true,
+    "preserveWatchOutput": true
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "tsd.d.ts"
   ]
 }
