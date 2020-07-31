@@ -1,5 +1,3 @@
-import {constants} from 'os';
-
 export * from './constants';
 export * from './ObjectUtils';
 export * from './quadtree';

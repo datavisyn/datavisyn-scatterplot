@@ -8,13 +8,10 @@ import {axisLeft, axisBottom, axisRight} from 'd3-axis';
 import {scaleLinear} from 'd3-scale';
 import {select} from 'd3-selection';
 import {quadtree, Quadtree} from 'd3-quadtree';
-import {ISymbol, ISymbolRenderer, ERenderMode, createRenderer} from './symbol';
-import {
-  hasOverlap,
-  IBoundsPredicate
-} from './quadtree';
+import {ISymbol, ISymbolRenderer, ERenderMode, SymbolUtils} from './symbol';
+import {QuadtreeUtils, IBoundsPredicate} from './quadtree';
 import {cssprefix, DEBUG, debuglog} from './constants';
-import AScatterplot, {
+import {AScatterplot,
   fixScale,
   IScale,
   IFormatOptions,
@@ -102,7 +99,7 @@ function defaultProps<T,U>(): Partial<IDualAxisScatterplotOptions<T,U>> {
 /**
  * a class for rendering a double y-axis scatterplot in a canvas
  */
-export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
+export class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxisScatterplotOptions<T, U>> {
 
   protected readonly normalized2pixel: IDualAxisScalesObject = {
     x: scaleLinear(),
@@ -121,8 +118,8 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
     this.props.yscale = fixScale(this.props.yscale, this.props.y, data, props ? props.yscale : null, props ? props.ylim : null);
     this.props.y2scale = fixScale(this.props.y2scale, this.props.y2, secondaryData, props ? props.y2scale : null, props ? props.y2lim : null);
 
-    this.renderer = createRenderer(this.props.symbol);
-    this.secondaryRenderer = createRenderer(this.props.symbol2);
+    this.renderer = SymbolUtils.createRenderer(this.props.symbol);
+    this.secondaryRenderer = SymbolUtils.createRenderer(this.props.symbol2);
 
     // generate aspect ratio right normalized domain
     this.normalized2pixel.x.domain(DEFAULT_NORMALIZED_RANGE.map((d) => d*this.props.aspectRatio));
@@ -203,8 +200,8 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
     const ny = (v: number) => n2pY.invert(v);
     const ny2 = (v: number) => n2pY2.invert(v);
     //inverted y scale
-    const isNodeVisible = hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
-    const isNodeVisible2 = hasOverlap(nx(0), ny2(boundsHeight), nx(boundsWidth), ny2(0));
+    const isNodeVisible = QuadtreeUtils.hasOverlap(nx(0), ny(boundsHeight), nx(boundsWidth), ny(0));
+    const isNodeVisible2 = QuadtreeUtils.hasOverlap(nx(0), ny2(boundsHeight), nx(boundsWidth), ny2(0));
 
     const renderInfo = {
       zoomLevel: this.currentTransform.k
@@ -339,5 +336,9 @@ export default class DualAxisScatterplot<T, U> extends AScatterplot<T, IDualAxis
     //debug stats
 
     super.traverseTree(ctx, tree, renderer, xscale, yscale, isNodeVisible, debug, x, y);
+  }
+
+  static dualAxis<T, U>(data:T[], secondaryData:U[], canvas:HTMLCanvasElement, options: IDualAxisScatterplotOptions<T, U>) {
+    return new DualAxisScatterplot(data, secondaryData, canvas, options);
   }
 }

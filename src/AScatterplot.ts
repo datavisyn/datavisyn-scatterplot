@@ -7,22 +7,11 @@ import {drag as d3drag} from 'd3-drag';
 import {scaleLinear} from 'd3-scale';
 import {quadtree, Quadtree, QuadtreeInternalNode, QuadtreeLeaf} from 'd3-quadtree';
 import {ISymbol, ISymbolRenderer} from './symbol';
-import merge from './merge';
-import {
-  forEachLeaf,
-  ellipseTester,
-  isLeafNode,
-  getTreeSize,
-  findByTester,
-  getFirstLeaf,
-  ABORT_TRAVERSAL,
-  CONTINUE_TRAVERSAL,
-  IBoundsPredicate,
-  ITester
-} from './quadtree';
-import Lasso, {ILassoOptions, defaultOptions} from './lasso';
+import {ObjectUtils} from './ObjectUtils';
+import {QuadtreeUtils, IBoundsPredicate, ITester} from './quadtree';
+import {Lasso, ILassoOptions} from './lasso';
 import {cssprefix, debuglog} from './constants';
-import showTooltip from './tooltip';
+import {TooltipUtils} from './tooltip';
 import {EventEmitter} from 'eventemitter3';
 
 export enum EScaleAxes {
@@ -46,6 +35,8 @@ export interface IScale extends AxisScale<number>, ZoomScale {
   domain(domain: number[]): this;
   invert(v: number): number;
   copy(): this;
+  (x: number): number | undefined;
+  bandwidth?(): number;
 }
 
 export interface IScalesObject {
@@ -314,13 +305,13 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 
     tooltipDelay: 500,
 
-    showTooltip,
+    showTooltip: TooltipUtils.showTooltip,
 
     isSelectEvent: (event: MouseEvent) => event.ctrlKey || event.altKey,
 
     lasso: Object.assign({
       interval: 100
-    }, defaultOptions()),
+    }, Lasso.defaultOptions()),
 
     extras: null,
     renderBackground: null,
@@ -332,7 +323,7 @@ function defaultProps<T>(): Readonly<IScatterplotOptions<T>> {
 /**
  * an class for rendering a scatterplot in a canvas
  */
-abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
+export abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEmitter {
 
   static EVENT_SELECTION_CHANGED = 'selectionChanged';
   static EVENT_SELECTION_IN_PROGRESS_CHANGED = 'selectionInProgressChanged';
@@ -373,7 +364,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   constructor(root: HTMLElement, props?: Partial<C>) {
     super();
-    this.props = <C>merge(defaultProps(), props);
+    this.props = <C>ObjectUtils.merge(defaultProps(), props);
     this.parent = root.ownerDocument!.createElement('div');
 
     //need to use d3 for d3.mouse to work
@@ -617,7 +608,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
 
   protected selectWithTester(tester: ITester, inProgress = false) {
-    const selection = findByTester(this.tree!, tester);
+    const selection = QuadtreeUtils.findByTester(this.tree!, tester);
     return this.setSelectionImpl(selection, inProgress);
   }
 
@@ -712,15 +703,20 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
   }
 
   private window2transform(window: IWindow) {
-    const range2transform = (minMax: IMinMax, scale: IScale) => {
-      const pmin = scale(minMax[0])!;
-      const pmax = scale(minMax[1])!;
-      const k = (scale.range()[1] - scale.range()[0]) / (pmax - pmin);
-      return {k, t: (scale.range()[0] - pmin)};
+    const range2transform = (minMax: IMinMax, scale: IScale, coordinateSystemOrigin: number) => {
+      const scaledWindowAxisMin = scale(minMax[0])!;
+      const scaledWindowAxisMax = scale(minMax[1])!;
+      const pmin = Math.min(scaledWindowAxisMin, scaledWindowAxisMax);
+      const pmax = Math.max(scaledWindowAxisMin, scaledWindowAxisMax);
+
+      const rangeMin = Math.min(scale.range()[0], scale.range()[1]);
+      const rangeMax = Math.max(scale.range()[0], scale.range()[1]);
+      const k = (rangeMax - rangeMin) / (pmax - pmin);
+      return {k, t: (coordinateSystemOrigin - pmin)};
     };
     const s = this.props.scale;
-    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale) : null;
-    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale) : null;
+    const x = (s === EScaleAxes.x || s === EScaleAxes.xy) ? range2transform(window.xMinMax, this.props.xscale, this.props.xscale.range()[0]) : null;
+    const y = (s === EScaleAxes.y || s === EScaleAxes.xy) ? range2transform(window.yMinMax, this.props.yscale, this.props.yscale.range()[1]) : null;
     let k = 1;
     if (x && y) {
       k = Math.min(x.k, y.k);
@@ -814,7 +810,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   private onDrag() {
     if (this.dragHandle < 0) {
-      this.dragHandle = setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
+      this.dragHandle = window.setInterval(this.updateDrag.bind(this), this.props.lasso.interval);
     }
     this.lasso.setCurrent(d3event.x, d3event.y);
     this.render(ERenderReason.SELECTION_CHANGED);
@@ -854,7 +850,7 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     }
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos();
     //find closest data item
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    const tester = QuadtreeUtils.ellipseTester(x, y, clickRadiusX, clickRadiusY);
     this.selectWithTester(tester);
     this.emit(AScatterplot.EVENT_MOUSE_CLICKED, event);
   }
@@ -868,8 +864,8 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
   findItems(canvasPos: [number, number]) {
     const {x, y, clickRadiusX, clickRadiusY} = this.getMouseNormalizedPos(canvasPos);
-    const tester = ellipseTester(x, y, clickRadiusX, clickRadiusY);
-    return findByTester(this.tree!, tester);
+    const tester = QuadtreeUtils.ellipseTester(x, y, clickRadiusX, clickRadiusY);
+    return QuadtreeUtils.findByTester(this.tree!, tester);
   }
 
   private onMouseMove(event: MouseEvent) {
@@ -896,21 +892,21 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
 
     const visitTree = (node: QuadtreeInternalNode<X> | QuadtreeLeaf<X>, x0: number, y0: number, x1: number, y1: number) => {
       if (!isNodeVisible(x0, y0, x1, y1)) {
-        hidden += debug ? getTreeSize(node) : 0;
-        return ABORT_TRAVERSAL;
+        hidden += debug ? QuadtreeUtils.getTreeSize(node) : 0;
+        return QuadtreeUtils.ABORT_TRAVERSAL;
       }
       if (this.useAggregation(n2pX, n2pY, x0, y0, x1, y1)) {
-        const d = getFirstLeaf(node);
+        const d = QuadtreeUtils.getFirstLeaf(node);
         //debuglog('aggregate', getTreeSize(node));
         rendered++;
-        aggregated += debug ? (getTreeSize(node) - 1) : 0;
+        aggregated += debug ? (QuadtreeUtils.getTreeSize(node) - 1) : 0;
         renderer.render(xscale(x(d))!, yscale(y(d))!, d);
-        return ABORT_TRAVERSAL;
+        return QuadtreeUtils.ABORT_TRAVERSAL;
       }
-      if (isLeafNode(node)) { //is a leaf
-        rendered += forEachLeaf(<QuadtreeLeaf<X>>node, (d) => renderer.render(xscale(x(d))!, yscale(y(d))!, d));
+      if (QuadtreeUtils.isLeafNode(node)) { //is a leaf
+        rendered += QuadtreeUtils.forEachLeaf(<QuadtreeLeaf<X>>node, (d) => renderer.render(xscale(x(d))!, yscale(y(d))!, d));
       }
-      return CONTINUE_TRAVERSAL;
+      return QuadtreeUtils.CONTINUE_TRAVERSAL;
     };
 
     ctx.save();
@@ -974,5 +970,3 @@ abstract class AScatterplot<T, C extends IScatterplotOptions<T>> extends EventEm
     return minSize < 5; //TODO tune depend on visual impact
   }
 }
-
-export default AScatterplot;

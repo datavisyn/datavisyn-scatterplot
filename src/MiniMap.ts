@@ -2,7 +2,7 @@
  * Created by sam on 19.12.2016.
  */
 
-import Scatterplot from './Scatterplot';
+import {Scatterplot} from './Scatterplot';
 import {select, event as d3event} from 'd3-selection';
 import {ScaleLinear, scaleLinear} from 'd3-scale';
 import {brushX, brushY, brush, D3BrushEvent, BrushBehavior} from 'd3-brush';
@@ -13,7 +13,7 @@ export interface IMiniMapOptions {
   scale: EScaleAxes;
 }
 
-export default class MiniMap {
+export class MiniMap {
   private readonly brush: BrushBehavior<any>;
   private readonly props: Readonly<IMiniMapOptions> = {
     scale: EScaleAxes.xy
@@ -103,7 +103,7 @@ export default class MiniMap {
    * @param {ScaleLinear<number, number>} scale
    * @returns {[number , number]}
    */
-  private scale(minMax: IMinMax, scale: ScaleLinear<number, number>) : [number, number] {
+  private scale(minMax: IMinMax, scale: ScaleLinear<number, number>): [number, number] {
     return [scale(minMax[0]), scale(minMax[1])];
   }
 }

@@ -7,8 +7,8 @@
 import {line as d3line, curveLinearClosed} from 'd3-shape';
 import {polygonHull, polygonContains} from 'd3-polygon';
 import {extent} from 'd3-array';
-import {hasOverlap, ITester} from './quadtree';
-import merge from './merge';
+import {QuadtreeUtils, ITester} from './quadtree';
+import {ObjectUtils} from './ObjectUtils';
 
 declare type IPoint = [number, number];
 
@@ -28,30 +28,15 @@ export interface ILassoOptions {
   dashedLine: {dashLength: number, gapLength: number};
 }
 
-/**
- * @internal
- */
-export function defaultOptions(): Readonly<ILassoOptions> {
-  return {
-    lineWidth: 2,
-    strokeStyle: 'rgba(0,0,0,1)',
-    fillStyle: 'rgba(0,0,0,0.2)',
-    pointRadius: 3,
-    dashedLine: {
-      dashLength: 5,
-      gapLength: 3
-    }
-  };
-}
 
-export default class Lasso {
-  private props: Readonly<ILassoOptions> = defaultOptions();
+export class Lasso {
+  private props: Readonly<ILassoOptions> = Lasso.defaultOptions();
   private line = d3line().curve(curveLinearClosed);
   private points: IPoint[] = [];
   private current: IPoint|null = null;
 
   constructor(options?: Partial<ILassoOptions>) {
-    merge(this.props, options);
+    ObjectUtils.merge(this.props, options);
   }
 
   start(x: number, y: number) {
@@ -94,7 +79,7 @@ export default class Lasso {
     const [y0, y1] = extent(polygon, (d) => d[1]);
     return {
       test: (x: number, y: number) => polygonContains(polygon, [x, y]),
-      testArea: hasOverlap(x0!, y0!, x1!, y1!)
+      testArea: QuadtreeUtils.hasOverlap(x0!, y0!, x1!, y1!)
     };
   }
 
@@ -137,5 +122,19 @@ export default class Lasso {
     ctx.stroke();
 
     ctx.restore();
+  }
+
+
+  static defaultOptions(): Readonly<ILassoOptions> {
+    return {
+      lineWidth: 2,
+      strokeStyle: 'rgba(0,0,0,1)',
+      fillStyle: 'rgba(0,0,0,0.2)',
+      pointRadius: 3,
+      dashedLine: {
+        dashLength: 5,
+        gapLength: 3
+      }
+    };
   }
 }
