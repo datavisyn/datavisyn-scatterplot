@@ -1,0 +1,129 @@
+/**
+ * Created by sam on 28.10.2016.
+ */
+
+.#{$ds_css} {
+    position: relative;
+
+    &.xy-zoomed {
+        cursor: all-scroll;
+    }
+
+    &.x-zoomed {
+        cursor: ew-resize;
+    }
+
+    &.y-zoomed {
+        cursor: ns-resize;
+    }
+
+    canvas {
+        @include abspos();
+
+        &.#{$ds_css}-data-layer {
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        &.#{$ds_css}-selection-layer {
+            z-index: 2;
+        }
+    }
+
+    svg {
+        pointer-events: none;
+        @include abspos();
+
+        &.#{$ds_css}-axis-left {
+            z-index: 2;
+        }
+
+        &.#{$ds_css}-axis-bottom {
+            bottom: 0;
+            z-index: 3;
+        }
+
+        &.#{$ds_css}-axis-right {
+            position: absolute;
+        }
+    }
+
+    div {
+        &.#{$ds_css}-axis-left-label,
+        &.#{$ds_css}-axis-bottom-label,
+        &.#{$ds_css}-axis-right-label {
+            pointer-events: none;
+            user-select: none;
+            text-align: center;
+            position: absolute;
+        }
+
+        &.#{$ds_css}-axis-bottom-label {
+            bottom: 0;
+        }
+
+        &.#{$ds_css}-axis-left-label,
+        &.#{$ds_css}-axis-right-label {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 1em;
+            white-space: nowrap;
+
+            > div {
+                transform: rotate(270deg);
+                transform-origin: center center;
+            }
+        }
+
+        &.#{$ds_css}-draw-area {
+            position: absolute;
+            user-select: none;
+            z-index: 3;
+        }
+    }
+
+    /*
+    * similar to bootstrap tooltip
+    */
+
+    .#{$ds_css}-tooltip {
+        display: none;
+        position: absolute;
+        width: auto;
+        height: auto;
+        z-index: 4;
+        padding: 5px 0;
+
+        > :first-child {
+            padding: 3px 8px;
+            color: #fff;
+            text-align: center;
+            background-color: #000;
+            border-radius: 4px;
+        }
+
+        > :last-child {
+            margin-left: -5px;
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: transparent;
+            border-top-color: #000;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 0;
+        }
+    }
+}
+
+.#{$ds_css}-minimap {
+    position: relative;
+    background-color: gray;
+
+    svg {
+        width: 100%;
+        height: 100%;
+    }
+}
