@@ -32,6 +32,21 @@ jobs:
           command: npm run dist
       - store_artifacts:
           path: dist
+      - persist_to_workspace:
+          root: ~/phovea
+          paths: .
+  publish:
+    executor: node-executor
+    steps:
+      - attach_workspace:
+          at: ~/phovea
+      - run:
+          name: Authentication
+          command: |
+            echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run:
+          name: Publish package
+          command: npm publish
 workflows:
   version: 2.1
 #  build-nightly:
@@ -44,9 +59,27 @@ workflows:
 #                - develop
 #    jobs:
 #      - build
-  build-branches-and-tags:
+  build-branches-only:
     jobs:
       - build:
           filters:
             tags:
-              only: /.*/        
+              ignore: /.*/
+  build-publish-tag:
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - publish:
+          context:
+            - org-public
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/    
